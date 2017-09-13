@@ -330,22 +330,98 @@ Get familiar with this dataset first. You can use `?ISLR::Auto` to view a descri
 
 ### Q3.1
 Explore the data, with particular focus on pairwise plots and summary statistics. Briefly summarize your findings and any peculiarities in the data.
+```{r}
+summary(auto_data)
+pairs(auto_data)
 
+```
+Summary: Cars from 1970 - 1982 with a wide range of characteristics
+
+We find that there might be a linear relationship between: 
+* displacement vs horsepower
+* displacement vs weight
+* displacement vs cylinders
+* horsepower vs weight
+* horsepower vs acceleration
+* mpg vs horsepower
+* mpg vs weight
+* mpg vs displacement
 
 ### Q3.2
 What effect does time have on MPG?
 
 i. Start with a simple regression of mpg vs. year and report R's `summary` output. Is year a significant variable at the .05 level? State what effect year has on mpg, if any, according to this model. 
-ii. Add horsepower on top of the variable year. Is year still a significant variable at the .05 level? Give a precise interpretation of the year effect found here. 
-iii. The two 95% CI's for the coefficient of year differ among i) and ii). How would you explain the difference to a non-statistician?
-iiii. Do a model with interaction by fitting `lm(mpg ~ year * horsepower)`. Is the interaction effect significant at .05 level? Explain the year effect (if any). 
 
+```{r}
+ggplot(auto_data, aes(year,mpg)) + geom_point(size=5) + labs(title="Year vs MPG", x = "Year", y = "MPG") + geom_smooth(method="lm", se=FALSE)
+
+auto_year_lse = lm(auto_data$mpg ~ auto_data$year)
+summary(auto_year_lse)
+```
+Yes, year is a significant variable at the .05 level our P value < 0.0001
+According to our model, for every increase in year, we get a 1.23004 increase in mpg.
+
+ii. Add horsepower on top of the variable year. Is year still a significant variable at the .05 level? Give a precise interpretation of the year effect found here. 
+
+```{r}
+ggplot(auto_data, aes(year,mpg)) + geom_point(size=5) + labs(title="Year vs MPG", x = "Year", y = "MPG") + geom_smooth(method="lm", se=FALSE)
+
+auto_yearhp_lse = lm(auto_data$mpg ~ auto_data$year + auto_data$horsepower)
+summary(auto_yearhp_lse)
+```
+Yes, year is still significant at the 0.5 level since P < 0.0001
+
+According to our model, for every increase in year, holding horsepower constant, we can expect a 0.657268 increase in mpg. 
+
+iii. The two 95% CI's for the coefficient of year differ among i) and ii). How would you explain the difference to a non-statistician?
+
+```{r}
+t_star_auto <- qt(0.975, 389)
+
+lse_year_out <- summary(auto_year_lse)$coefficients
+se <- lse_year_out[2, 2]
+b1 <- lse_year_out[2, 1]
+upper_ci1 <- b1 + t_star_auto * se
+lower_ci2 <- b1 - t_star_auto * se
+
+year_CI <- cbind(se, b1, upper_ci1, lower_ci2)
+
+lse_yearhp_out <- summary(auto_yearhp_lse)$coefficients
+se2 <- lse_yearhp_out[2, 2]
+b12 <- lse_yearhp_out[2, 1]
+upper_ci3 <- b12 + t_star_auto * se2
+lower_ci4 <- b12 - t_star_auto * se2
+
+yearhp_CI <- cbind(se2, b12, upper_ci3, lower_ci4)
+```
+
+
+iiii. Do a model with interaction by fitting `lm(mpg ~ year * horsepower)`. Is the interaction effect significant at .05 level? Explain the year effect (if any). 
+```{r}
+auto_yeartimeshp_lse = lm(auto_data$mpg ~ auto_data$year * auto_data$horsepower)
+summary(auto_yeartimeshp_lse)
+```
+Yes, it is significant. For every increase increase in year, holding horsepower constant, mpg increases by 2.192
 
 ### Q3.3
 Remember that the same variable can play different roles! Take a quick look at the variable `cylinders`, try to use this variable in the following analyses wisely. We all agree that larger number of cylinder will lower mpg. However, we can interpret `cylinders` as either a continuous (numeric) variable or a categorical variable.
 
 i. Fit a model, that treats `cylinders` as a continuous/numeric variable: `lm(mpg ~ horsepower + cylinders, ISLR::Auto)`. Is `cylinders` significant at the 0.01 level? What effect does `cylinders` play in this model?
+
+```{r}
+auto_cylinders_lse = lm(auto_data$mpg ~ auto_data$horsepower + auto_data$cylinders)
+summary(auto_cylinders_lse)
+```
+Yes, cylinders is significant at the 0.01 level. For every increase in cylinders, holding horsepower constant, we have a decrease in mpg of 0.08612
+
 ii. Fit a model that treats `cylinders` as a categorical/factor variable:  `lm(mpg ~ horsepower + as.factor(cylinders), ISLR::Auto)`. Is `cylinders` significant at the .01 level? What is the effect of `cylinders` in this model? Use `anova(fit1, fit2)` and `Anova(fit2`)` to help gauge the effect. Explain the difference between `anova()` and `Anova`.
+
+```{r}
+auto_cat_cylinders_lse = lm(auto_data$mpg ~ auto_data$horsepower + as.factor(auto_data$cylinders))
+summary(auto_cat_cylinders_lse)
+```
+Yes, cylinders are significant at the 0.01 level only for 4 cylinders but not for 5,6,8.  anova() calculates the type 1 variance whereas Anova() calculates type 2 and type 3 variance.
+
 iii. What are the fundamental differences between treating `cylinders` as a numeric and or a factor models? 
 
 
