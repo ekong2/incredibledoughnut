@@ -176,7 +176,7 @@ Write a brief report to summarize all the variables collected. Include both summ
 
 * 78% of the respondents earn < $75,000 per year
 * Those earning less than $15,000 might be home-makers, retired professionals for extra income
-* 59.2% are in the age range of 18-29 years that might be young professionals who use a lot of internet and want to earn a little extra income in their spare time
+* 59% are in the age range of 18-29 years. They might be young professionals who use a lot of internet and want to earn a little extra income in their spare time
 
 ### Q1.4 Sample property questions
 
@@ -452,7 +452,7 @@ iiii. Do a model with interaction by fitting `lm(mpg ~ year * horsepower)`. Is t
 auto_yeartimeshp_lse = lm(auto_data$mpg ~ auto_data$year * auto_data$horsepower)
 summary(auto_yeartimeshp_lse)
 ```
-Yes, it is significant. For every increase increase in year, holding horsepower constant, mpg increases by 2.17604 (2.192 - 0.01596)
+Yes, the interaction is significant at .05 level. For every increase increase in year, holding horsepower constant, mpg increases by 2.17604 (2.192 - 0.01596)
 
 ### Q3.3
 Remember that the same variable can play different roles! Take a quick look at the variable `cylinders`, try to use this variable in the following analyses wisely. We all agree that larger number of cylinder will lower mpg. However, we can interpret `cylinders` as either a continuous (numeric) variable or a categorical variable.
@@ -491,7 +491,7 @@ anova(lm(auto_data$mpg ~ auto_data$horsepower), auto_cat_cylinders_lse)
 iii. What are the fundamental differences between treating `cylinders` as a numeric and or a factor models? 
 
 The difference between treating cylinder as numeric and as a factor is that it creates completely diffrent models. When treated as a factor, you get many variables and estimates while numeric variable only has one estimate. In the categorical model, the estimates are derived from the first variable in the factor that is treated as the intercept.
-
+When considering cylinders as a numeric variable, when the number of cylinders double, the corresponding increase in mpg also doubles. But this is not true when cylinders is considered as a factor. When the number of cylinders double, the corresponding increase in mpg would not double.
 
 ### Q3.4
 Final modelling question: we want to explore the effects of each feature as best as possible. You may explore interactions, feature transformations, higher order terms, or other strategies within reason. The model(s) should be as parsimonious (simple) as possible unless the gain in accuracy is significant from your point of view.
