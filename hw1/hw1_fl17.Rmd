@@ -491,7 +491,7 @@ anova(lm(auto_data$mpg ~ auto_data$horsepower), auto_cat_cylinders_lse)
 iii. What are the fundamental differences between treating `cylinders` as a numeric and or a factor models? 
 
 The difference between treating cylinder as numeric and as a factor is that it creates completely diffrent models. When treated as a factor, you get many variables and estimates while numeric variable only has one estimate. In the categorical model, the estimates are derived from the first variable in the factor that is treated as the intercept.
-When considering cylinders as a numeric variable, when the number of cylinders double, the corresponding increase in mpg also doubles. But this is not true when cylinders is considered as a factor. When the number of cylinders double, the corresponding increase in mpg would not double.
+While considering cylinders as a numeric variable, when the number of cylinders double, the corresponding increase in mpg also doubles. But this is not true when cylinders is considered as a factor. When the number of cylinders double, the corresponding increase in mpg would not double.
 
 ### Q3.4
 Final modelling question: we want to explore the effects of each feature as best as possible. You may explore interactions, feature transformations, higher order terms, or other strategies within reason. The model(s) should be as parsimonious (simple) as possible unless the gain in accuracy is significant from your point of view.
@@ -500,6 +500,23 @@ i. Describe the final model. Include diagnostic plots with particular focus on t
 ii. Summarize the effects found.
 iii. Predict the mpg of a car that is: built in 1983, in US, red, 180 inches long, 8 cylinders, 350 displacement, 260 as horsepower and weighs 4000 pounds. Give a 95% CI.
 
+```{r}
+model1 <- lm(mpg ~ weight + year + origin, data=auto_data)
+summary(model1)
+new_data <- data.frame(weight=4000, year= 83, origin=1)
+prediction <- predict(model1, newdata=new_data, interval='confidence')
+```
+
+****************Include diagnostic plots with particular focus on the model residuals and diagnoses.************
+***Origin is categorical, how to analyse that?**
+
+The final model with the least number of terms which gives the highest Adjusted R-squared is the one which includes weight, year and origin. 
+* With every increase of one 1 lbs of weight, keeping year and origin constant, the mpg decreases by 0.00599. 
+* With every increase of one year, keeping weight and origin constant, the mpg increases by 0.757.
+
+The predicted mpg of a car that is: built in 1983, in US, red, 180 inches long, 8 cylinders, 350 displacement, 260 as horsepower and weighs 4000 pounds, is `r prediction[1]`miles per gallon.
+
+The 95% CI is `r prediction[2]` and `r prediction[3]`miles per gallon. 
 
 
 
