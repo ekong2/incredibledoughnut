@@ -482,12 +482,6 @@ It is better to use Anova(fit2) because in anova(fit1, fit2), fit1 is not a subs
 
 Yes, cylinders is significant at the 0.01 level.
 
-********What is the effect of `cylinders` in this model*******
-
-```{r}
-anova(lm(auto_data$mpg ~ auto_data$horsepower), auto_cat_cylinders_lse)
-```
-
 iii. What are the fundamental differences between treating `cylinders` as a numeric and or a factor models? 
 
 The difference between treating cylinder as numeric and as a factor is that it creates completely diffrent models. When treated as a factor, you get many variables and estimates while numeric variable only has one estimate. In the categorical model, the estimates are derived from the first variable in the factor that is treated as the intercept.
@@ -505,10 +499,15 @@ model1 <- lm(mpg ~ weight + year + origin, data=auto_data)
 summary(model1)
 new_data <- data.frame(weight=4000, year= 83, origin=1)
 prediction <- predict(model1, newdata=new_data, interval='confidence')
-```
 
-****************Include diagnostic plots with particular focus on the model residuals and diagnoses.************
-***Origin is categorical, how to analyse that?**
+plot(model1$fitted, model1$residuals, 
+     pch  = 16,
+     main = "residual plot")
+abline(h=0, lwd=4, col="red")
+
+qqnorm(model1$residuals)
+  qqline(model1$residuals, lwd=4, col="blue")
+```
 
 The final model with the least number of terms which gives the highest Adjusted R-squared is the one which includes weight, year and origin. 
 * With every increase of one 1 lbs of weight, keeping year and origin constant, the mpg decreases by 0.00599. 
