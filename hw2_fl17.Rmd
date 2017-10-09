@@ -12,6 +12,10 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(fig.height=5, fig.width=11, warning = F)
+if(!require('pacman')) {
+  install.packages('pacman')
+}
+pacman::p_load(glmnet, leaps, car, tidyverse, mapproj)
 
 # constants for homework assignments
 hw_num <- 2
