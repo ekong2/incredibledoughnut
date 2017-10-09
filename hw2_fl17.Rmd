@@ -1,0 +1,261 @@
+---
+title: "Modern Data Mining - HW 2"
+author:
+- Aditi Jayashankar
+- Eddie Kong
+- Sahana Vijaya Prasad
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.height=5, fig.width=11, warning = F)
+
+# constants for homework assignments
+hw_num <- 2
+hw_due_date <- "10 October, 2017"
+```
+
+## Overview / Instructions
+
+This is homework #`r paste(hw_num)` of STAT 471/571/701. It will be **due on `r paste(hw_due_date)` by 11:59 PM** on Canvas. You can directly edit this file to add your answers. Submit the Rmd file, a PDF or word or HTML version with only 1 submission per HW team.
+
+
+Solutions will be posted. Make sure to go through these files to pick up some tips.
+
+## R Markdown / Knitr tips
+
+You should think of this R Markdown file as generating a polished report, one that you would be happy to show other people (or your boss). There shouldn't be any extraneous output; all graphs and code run should clearly have a reason to be run. That means that any output in the final file should have explanations.
+
+A few tips:
+
+* Keep each chunk to only output one thing! In R, if you're not doing an assignment (with the `<-` operator), it's probably going to print something.
+* If you don't want to print the R code you wrote (but want to run it, and want to show the results), use a chunk declaration like this: `{r, echo=F}`
+* If you don't want to show the results of the R code or the original code, use a chunk declaration like: `{r, include=F}`
+* If you don't want to show the results, but show the original code, use a chunk declaration like: `{r, results='hide'}`.
+* If you don't want to run the R code at all use `{r, eval = F}`.
+* We have shown examples in our lectures files. 
+* For more details about these R Markdown options, see the [documentation](http://yihui.name/knitr/options/).
+* **Delete the instructions and this R Markdown section, since they're not part of your overall report.**
+
+
+```{r library, include=FALSE}
+# add your library imports here:
+library(dplyr)
+library(leaps)
+library(ggplot2)
+library(glmnet)
+library(reshape2)
+```
+
+## Problem 0
+
+Review the code and concepts covered during lecture: model selection and penalized regression through elastic net. 
+
+## Problem 1: Model Selection
+
+Do ISLR, page 262, problem 8, and write up the answer here. This question is designed to help understanding of model selection through simulations. 
+
+#### (a)
+```{r}
+set.seed(19)
+n <- 100
+x <- rnorm(n)
+epsilon <- rnorm(n)
+```
+
+#### (b)
+The betas are beta0=0.25, beta1=1.9, beta2=1.23, beta3=0.89
+```{r}
+Y <- 0.25 + 1.9 * x + 1.23 * x^2 + 0.89 * x^3 + epsilon
+```
+
+#### (c)
+```{r}
+df <- data.frame(Y, x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10)
+models <- regsubsets(Y ~ ., df, nvmax = 10, method='exhaustive')
+
+summ <- summary(models)
+
+best_cp <- which.min(summ$cp)
+best_bic <- which.min(summ$bic)
+best_adjr2 <- which.max(summ$adjr2)
+```
+The best model according to BIC is using `r best_bic` predictors, according to CP using `r best_cp` predictors and using Adjusted R^2 `r best_adjr2` predictors.
+
+```{r}
+par(mfrow=c(3, 1), mar=c(2.5, 4, 0.5, 1), mgp=c(1.5, 0.5, 0))
+plot(summ$cp, xlab="Number of predictors", 
+     ylab="cp", col="red", type="p", pch=16)
+plot(summ$bic, xlab="Number of predictors", 
+     ylab="bic", col="blue", type="p", pch=16)
+plot(summ$adjr2, xlab="Number of predictors", 
+     ylab="adjr2", col="green", type="p", pch=16)
+```
+
+The coefficients of the best model (using 3 predictors) are:
+```{r}
+coef(models, id = 3)
+```
+
+#### (d)
+```{r}
+models.f <- regsubsets(Y ~ ., df, nvmax = 10, method='forward')
+
+summ.f <- summary(models.f)
+
+best_cp.f <- which.min(summ.f$cp)
+best_bic.f <- which.min(summ.f$bic)
+best_adjr2.f <- which.max(summ.f$adjr2)
+```
+The best model according to BIC is using `r best_bic.f` predictors, according to CP using `r best_cp.f` predictors and using Adjusted R^2 `r best_adjr2.f` predictors.
+
+```{r}
+par(mfrow=c(3, 1), mar=c(2.5, 4, 0.5, 1), mgp=c(1.5, 0.5, 0))
+plot(summ.f$cp, xlab="Number of predictors", 
+     ylab="cp", col="red", type="p", pch=16)
+plot(summ.f$bic, xlab="Number of predictors", 
+     ylab="bic", col="blue", type="p", pch=16)
+plot(summ.f$adjr2, xlab="Number of predictors", 
+     ylab="adjr2", col="green", type="p", pch=16)
+```
+The coefficients of the best model (using 3 predictors) through forward selection are:
+```{r}
+coef(models.f, id = 3)
+```
+
+```{r}
+models.b <- regsubsets(Y ~ ., df, nvmax = 10, method='backward')
+
+summ.b <- summary(models.b)
+
+best_cp.b <- which.min(summ.b$cp)
+best_bic.b <- which.min(summ.b$bic)
+best_adjr2.b <- which.max(summ.b$adjr2)
+```
+The best model according to BIC is using `r best_bic.b` predictors, according to CP using `r best_cp.b` predictors and using Adjusted R^2 `r best_adjr2.b` predictors.
+
+```{r}
+par(mfrow=c(3, 1), mar=c(2.5, 4, 0.5, 1), mgp=c(1.5, 0.5, 0))
+plot(summ.b$cp, xlab="Number of predictors", 
+     ylab="cp", col="red", type="p", pch=16)
+plot(summ.b$bic, xlab="Number of predictors", 
+     ylab="bic", col="blue", type="p", pch=16)
+plot(summ.b$adjr2, xlab="Number of predictors", 
+     ylab="adjr2", col="green", type="p", pch=16)
+```
+The coefficients of the best model (using 3 predictors) through backward selection are:
+```{r}
+coef(models.b, id = 3)
+```
+
+The results are the same for forward and backward selection for this particular choice of betas and seed. Although, the results may vary between forward and backward selection because forward starts with 0 predictors and grows and backward starts with all predictors and shrinks.
+
+#### (e)
+Without CV
+```{r}
+X.lasso <- matrix(data=c(x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10),nrow=100)
+models.lasso <- glmnet(X.lasso, Y, alpha = 1)
+
+plot(models.lasso)
+```
+With CV
+```{r}
+models.lasso.cv <- cv.glmnet(X.lasso, Y, alpha = 1)
+
+plot(models.lasso.cv)
+```
+
+```{r}
+plot(models.lasso.cv$lambda, models.lasso.cv$cvm, xlab=expression(lambda), ylab="Mean cv error", col="red", pch=16)
+```
+The LASSO coefficients using lambda.min = `r models.lasso.cv$lambda.min` are:
+```{r}
+coef(models.lasso.cv, s = "lambda.min")
+```
+The LASSO coefficients using lambda.1se = `r models.lasso.cv$lambda.1se` are:
+```{r}
+coef(models.lasso.cv, s = "lambda.1se")
+```
+We chose lambda.min to fit the model with the following coefficients:
+```{r}
+coef.min <- coef(models.lasso.cv, s="lambda.min")  #s=c("lambda.1se","lambda.min") or lambda value
+coef.min <- coef.min[which(coef.min !=0),]   # get the non=zero coefficients
+var.min <- rownames(as.matrix(coef.min)) # output the names
+lm.input <- as.formula(paste("Y", "~", paste(var.min[-1], collapse = "+"))) # prepare for lm fomulae
+fit.min.lm <- lm(Y ~ x+x.2+x.3, data=df)
+coef(fit.min.lm) # output lm estimates
+```
+
+#### (f)
+```{r}
+Y.new = 0.3 + 7 * x^7 + epsilon
+```
+## Problem 2: Regularization
+
+Crime data continuation:  We use a subset of the crime data discussed in class, but only look at Florida and California. `crimedata` is available on Canvas; we show the code to clean here. 
+
+```{r}
+crime <- read.csv("CrimeData.csv", stringsAsFactors = F, na.strings = c("?"))
+crime <- dplyr::filter(crime, state %in% c("FL", "CA"))
+```
+
+Our goal is to find the factors which relate to violent crime. This variable is included in crime as `crime$violentcrimes.perpop`.
+
+**A)** EDA
+
+* Clean the data first
+* Prepare a set of sensible factors/variables that you may use to build a model
+* Show the heatmap with mean violent crime by state. You may also show a couple of your favorite summary statistics by state through the heatmaps.
+* Write a brief summary based on your EDA
+
+```{r}
+#Checking NAs
+na_count <- sapply(crime, function(y) sum(length(which(is.na(y)))))
+data.frame(na_count)
+```
+
+```{r}
+#Removing NAs
+crime2 <- crime[, -which(colMeans(is.na(crime)) > 0.5)]
+
+na_count <- sapply(crime2, function(y) sum(length(which(is.na(y)))))
+data.frame(na_count)
+```
+
+```{r}
+#Only keep violent crimes
+crime.final <- crime2[-c(106:121, 123)]
+names(crime.final)
+```
+
+```{r}
+
+```
+**B)** Use LASSO to choose a reasonable, small model. Fit an OLS model with the variables obtained. The final model should only include variables with p-values < 0.05. Note: you may choose to use lambda 1se or lambda min to answer the following questions where apply. 
+
+1. What is the model reported by LASSO? 
+
+2. What is the model after running OLS?
+
+3. What is your final model, after excluding high p-value variables? You will need to use model selection method to obtain this final model. Make it clear what criterion/criteria you have used and justify why they are appropriate. 
+
+
+
+**C)** Now, instead of Lasso, we want to consider how changing the value of alpha (i.e. mixing between Lasso and Ridge) will affect the model. Cross-validate between alpha and lambda, instead of just lambda. Note that the final model may have variables with p-values higher than 0.05; this is because we are optimizing for accuracy rather than parsimoniousness. 
+
+1. What is your final elastic net model? What were the alpha and lambda values? What is the prediction error?
+
+2. Use the elastic net variables in an OLS model. What is the equation, and what is the prediction error.
+
+3. Summarize your findings, with particular focus on the difference between the two equations.
+ 
+
+**B+)** Repeat similar stepts as that of **B)** but start with the set of variables that also include all two way interactions
+
+1. How many variables do you have now?
+
+2. Comparing the final models with the ones from **B)**, which one would you use? Commenting on your choice.
+
