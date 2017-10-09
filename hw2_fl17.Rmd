@@ -235,7 +235,7 @@ crime.final <- crime2[-c(106:121, 123)]
 names(crime.final)
 ```
 
-```{r}
+```{r, echo=F}
 #Create Heatmap of USA crimerates
 data.s <- crime.final %>%
   group_by(state) %>%
@@ -272,7 +272,7 @@ ggplot(map, aes(x=long, y=lat, group=group))+
   scale_fill_continuous(limits=c(0, 2000),name="Mean Crime Rate",
                         low="light blue", high="dark blue")   # you may play the colors here
 ```
-```{r}
+```{r, echo=F}
 #Mean income heatmap
 income <- data.s[, c("state", "mean.income")]
 #Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
@@ -296,7 +296,7 @@ ggplot(map2, aes(x=long, y=lat, group=group))+
   scale_fill_continuous(limits=c(1000, 60000),name="Mean Income",
                         low="light blue", high="dark blue")   # you may play the colors here
 ```
-```{r}
+```{r, echo=F}
 # Mean unemployed percentage heatmap
 unemp <- data.s[, c("state", "mean.unemp")]
 
@@ -321,6 +321,10 @@ ggplot(map3, aes(x=long, y=lat, group=group))+
   scale_fill_continuous(limits=c(0, 10),name="Mean Unemployment Percentage",
                         low="light blue", high="dark blue")   # you may play the colors here
 ```
+
+A quick summary: We've excluded all states except CA and FL while removing NA's and non violent crimes from the data set. Florida seems to have a higher crime rate and a lower mean income. However, percent unemployment is lower. We'll have to perform additional analysis before arriving at any conclusion. 
+
+
 **B)** Use LASSO to choose a reasonable, small model. Fit an OLS model with the variables obtained. The final model should only include variables with p-values < 0.05. Note: you may choose to use lambda 1se or lambda min to answer the following questions where apply. 
 
 1. What is the model reported by LASSO? 
