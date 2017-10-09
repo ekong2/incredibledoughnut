@@ -232,7 +232,90 @@ names(crime.final)
 ```
 
 ```{r}
+#Create Heatmap of USA crimerates
+data.s <- crime.final %>%
+  group_by(state) %>%
+  summarise(
+    mean.income=mean(med.income), 
+    mean.unemp=mean(pct.unemployed),
+    crime.rate=mean(violentcrimes.perpop, na.rm=TRUE), #ignore the missing values
+    n=n())
 
+#Create a new data frame with mean income and corresponding state name
+crimerate <- data.s[, c("state", "crime.rate")]
+
+#Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
+crimerate$region <- tolower(state.name[match(crimerate$state, state.abb)])
+
+#Add the center coordinate for each state `state.center` contains the coordinate corresponding to `state.abb` in order.
+crimerate$center_lat  <- state.center$x[match(crimerate$state, state.abb)]
+crimerate$center_long <- state.center$y[match(crimerate$state, state.abb)]
+
+#Load US map info
+states <- map_data("state") 
+
+#Combine the US map data with the crimerate data
+map <- merge(states, crimerate, sort=FALSE, by="region", all.x=TRUE)
+
+#Re-establish the point order
+map <- map[order(map$order),]
+
+ggplot(map, aes(x=long, y=lat, group=group))+
+  geom_polygon(aes(fill=crime.rate))+
+  geom_path()+ 
+  geom_text(data=crimerate, aes(x=center_lat, y=center_long, group=NA, 
+                             label=state, size=2), show.legend =FALSE)+
+  scale_fill_continuous(limits=c(0, 2000),name="Mean Crime Rate",
+                        low="light blue", high="dark blue")   # you may play the colors here
+```
+```{r}
+#Mean income heatmap
+income <- data.s[, c("state", "mean.income")]
+#Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
+income$region <- tolower(state.name[match(income$state, state.abb)])
+
+#Add the center coordinate for each state `state.center` contains the coordinate corresponding to `state.abb` in order.
+income$center_lat  <- state.center$x[match(income$state, state.abb)]
+income$center_long <- state.center$y[match(income$state, state.abb)]
+
+#Combine the US map data with the income data
+map2 <- merge(states, income, sort=FALSE, by="region", all.x=TRUE)
+
+#Re-establish the point order
+map2 <- map2[order(map2$order),]
+
+ggplot(map2, aes(x=long, y=lat, group=group))+
+  geom_polygon(aes(fill=mean.income))+
+  geom_path()+ 
+  geom_text(data=income, aes(x=center_lat, y=center_long, group=NA, 
+                             label=state, size=2), show.legend =FALSE)+
+  scale_fill_continuous(limits=c(1000, 60000),name="Mean Income",
+                        low="light blue", high="dark blue")   # you may play the colors here
+```
+```{r}
+# Mean unemployed percentage heatmap
+unemp <- data.s[, c("state", "mean.unemp")]
+
+#Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
+unemp$region <- tolower(state.name[match(unemp$state, state.abb)])
+
+#Add the center coordinate for each state `state.center` contains the coordinate corresponding to `state.abb` in order.
+unemp$center_lat  <- state.center$x[match(unemp$state, state.abb)]
+unemp$center_long <- state.center$y[match(unemp$state, state.abb)]
+
+#Combine the US map data with the unemployment data
+map3 <- merge(states, unemp, sort=FALSE, by="region", all.x=TRUE)
+
+#Re-establish the point order
+map3 <- map3[order(map3$order),]
+
+ggplot(map3, aes(x=long, y=lat, group=group))+
+  geom_polygon(aes(fill=mean.unemp))+
+  geom_path()+ 
+  geom_text(data=unemp, aes(x=center_lat, y=center_long, group=NA, 
+                             label=state, size=2), show.legend =FALSE)+
+  scale_fill_continuous(limits=c(0, 10),name="Mean Unemployment Percentage",
+                        low="light blue", high="dark blue")   # you may play the colors here
 ```
 **B)** Use LASSO to choose a reasonable, small model. Fit an OLS model with the variables obtained. The final model should only include variables with p-values < 0.05. Note: you may choose to use lambda 1se or lambda min to answer the following questions where apply. 
 
