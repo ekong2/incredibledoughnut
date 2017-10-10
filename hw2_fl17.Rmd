@@ -196,7 +196,23 @@ coef(fit.min.lm) # output lm estimates
 #### (f)
 ```{r}
 Y.new = 0.3 + 7 * x^7 + epsilon
+df.new <- data.frame(Y.new, x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10)
+models.new <- regsubsets(Y.new ~ ., df.new, nvmax = 10, method='exhaustive')
+
+summ.new <- summary(models.new)
+
+best_cp <- which.min(summ.new$cp)
+best_bic <- which.min(summ.new$bic)
+best_adjr2 <- which.max(summ.new$adjr2)
 ```
+The best model according to BIC is using `r best_bic` predictors, according to CP using `r best_cp` predictors and using Adjusted R^2 `r best_adjr2` predictors.
+
+```{r}
+X.lasso.new <- matrix(data=c(x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10),nrow=100)
+models.lasso.new <- cv.glmnet(X.lasso.new, Y.new, alpha = 1)
+coef(models.lasso.new, s="lambda.min")
+```
+
 ## Problem 2: Regularization
 
 Crime data continuation:  We use a subset of the crime data discussed in class, but only look at Florida and California. `crimedata` is available on Canvas; we show the code to clean here. 
@@ -215,13 +231,13 @@ Our goal is to find the factors which relate to violent crime. This variable is 
 * Show the heatmap with mean violent crime by state. You may also show a couple of your favorite summary statistics by state through the heatmaps.
 * Write a brief summary based on your EDA
 
-```{r}
+```{r, results='hide'}
 #Checking NAs
 na_count <- sapply(crime, function(y) sum(length(which(is.na(y)))))
 data.frame(na_count)
 ```
 
-```{r}
+```{r, results='hide'}
 #Removing NAs
 crime2 <- crime[, -which(colMeans(is.na(crime)) > 0.5)]
 
@@ -229,11 +245,17 @@ na_count <- sapply(crime2, function(y) sum(length(which(is.na(y)))))
 data.frame(na_count)
 ```
 
-```{r}
-#Only keep violent crimes, remove communities
+```{r, results='hide'}
+#Only keep violent crimes
 crime.final <- crime2[-c(106:121, 123)]
 names(crime.final)
 ```
+
+```{r, include=F}
+#removed state, fold, community, num.urban, other.percap, num.underpov, num.vacant.house, pct.police.drugunits. same cleaning treatment as class example of cleandata.csv
+crime.final.noCat <- crime.final[-c(307),-c(1:3, 14, 29, 31, 75, 105)]
+```
+
 
 ```{r, echo=F}
 #Create Heatmap of USA crimerates
@@ -331,23 +353,41 @@ A quick summary: We've excluded all states except CA and FL while removing NA's 
 
 **B)** Use LASSO to choose a reasonable, small model. Fit an OLS model with the variables obtained. The final model should only include variables with p-values < 0.05. Note: you may choose to use lambda 1se or lambda min to answer the following questions where apply. 
 
-```{r, include=F}
-#removed state, fold, community, num.urban, other.percap, num.underpov, num.vacant.house, pct.police.drugunits. same cleaning treatment as class example of cleandata.csv
-crime.final.noCat <- crime.final[-c(307),-c(1:3, 14, 29, 31, 75, 105)]
-```
+1. What is the model reported by LASSO? 
 
 ```{r}
-Y.crime <- crime.final.noCat2[, 98]
-X.crime <- model.matrix(violentcrimes.perpop~., data=crime.final.noCat2)
+Y.crime <- crime.final.noCat[, 98]
+X.crime <- model.matrix(violentcrimes.perpop~., data=crime.final.noCat)
 crimes.lasso.cv <- cv.glmnet(X.crime, Y.crime, alpha = 1, nfolds=10)
 plot(crimes.lasso.cv)
+coef.min <- coef(crimes.lasso.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+coef.min <- coef.min[which(coef.min !=0),]   # get the non=zero coefficients
+coef.min  # the set of predictors chosen
+lasso.vars = rownames(as.matrix(coef.min)) # shows only names, not estimates  
 ```
-1. What is the model reported by LASSO? 
+
+We choose lambda1se as our lambda after performing kfold cross validation to obtain a smaller set of variables than with lambdamin and arrive at a simpler model.  This is because we believe that many of these variables influence each other (beyond the scope of our assumption that variables are independent - many socioeconomic factors have a strong correlation in real life). It is best to arrive at a smallest as possible but still relevant set of variables to examine.
+
+The model is `r coef.min`
+$$Y = 1810.355977 + 7.952891(race.pctblack) -18.222789(pct.kids2parents) + 78.476883(pct.kids.nvrmarried)$$
 
 2. What is the model after running OLS?
 
+```{r}
+var.min <- rownames(as.matrix(coef.min)) # output the names
+lm.input <- as.formula(paste("violentcrimes.perpop", "~", paste(var.min[-1], collapse = "+"))) # prepare for lm fomulae
+lm.input
+
+fit.min.lm <- lm(lm.input, data=crime.final.noCat)
+lm.output <- coef(fit.min.lm) # output lm estimates
+summary(fit.min.lm) 
+```
+The OLS model is $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
+
 3. What is your final model, after excluding high p-value variables? You will need to use model selection method to obtain this final model. Make it clear what criterion/criteria you have used and justify why they are appropriate. 
 
+Upon closer examination of the variables we are using, we notice that the p-values of all variables is < 0.05. This is most likely due to the fact that we've used lambda1se. Had we used lambdamin or another variable, the model is slightly more complex (it includes variables such as pct.house.vacant and num.in.shelters) of which some are above 0.05 and we would exclude. Our final model therefore remains the same as above and is:
+$$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
 
 
 **C)** Now, instead of Lasso, we want to consider how changing the value of alpha (i.e. mixing between Lasso and Ridge) will affect the model. Cross-validate between alpha and lambda, instead of just lambda. Note that the final model may have variables with p-values higher than 0.05; this is because we are optimizing for accuracy rather than parsimoniousness. 
