@@ -183,7 +183,7 @@ summ.new <- summary(models.new)
 
 best_cp.new <- which.min(summ.new$cp)
 best_bic.new <- which.min(summ.new$bic)
-best_adjr2.ew <- which.max(summ.new$adjr2)
+best_adjr2.new <- which.max(summ.new$adjr2)
 ```
 The best model according to BIC is using `r best_bic.new` predictors, according to CP using `r best_cp.new` predictors and using Adjusted R^2 `r best_adjr2.new` predictors.
 
@@ -387,7 +387,7 @@ lasso.vars
 
 We choose lambda1se as our lambda after performing kfold cross validation to obtain a smaller set of variables than with lambdamin and arrive at a simpler model.  This is because we believe that many of these variables influence each other (beyond the scope of our assumption that variables are independent - many socioeconomic factors have a strong correlation in real life). It is best to arrive at a smallest as possible but still relevant set of variables to examine.
 
-The model is `r coef.min`
+The model is `r crimes.coef.min`
 $$Y = 1810.355977 + 7.952891(race.pctblack) -18.222789(pct.kids2parents) + 78.476883(pct.kids.nvrmarried)$$
 
 #Keeps chaninging????
@@ -424,16 +424,13 @@ plot(fit.elastic.cv)
 ```
 
 This is our final elastic net model. We chose alpha to be close to 1 so that we can perform feature selection, yet benefit from Ridge Regression.
-The alpha value is 0.9, all the lambda values considered for cross-validation are:
-```{r}
-fit.elastic.cv$lambda
-```
+The alpha value is 0.9, and 100 lambda values are considered for cross-validation.
 
 Lambda min is `r fit.elastic.cv$lambda.min` and lambda 1se is `r fit.elastic.cv$lambda.1se`
 
-The mean-squared error is `r fit.elastic.cv$cvm` and standard deviation is `r fit.elastic.cv$cvsd
+The mean-squared error is `r ` and standard deviation is `r`
 
-#Right????
+#TODO????
 2. Use the elastic net variables in an OLS model. What is the equation, and what is the prediction error.
 
 ```{r}
