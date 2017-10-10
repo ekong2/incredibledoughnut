@@ -414,7 +414,29 @@ $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.ki
 
 **B+)** Repeat similar stepts as that of **B)** but start with the set of variables that also include all two way interactions
 
+```{r}
+Y.crimeSQ <- crime.final.noCat[, 98]
+X.crimeSQ <- model.matrix(violentcrimes.perpop~.+.*., data=crime.final.noCat)
+crimes.lasso.cv.sq <- cv.glmnet(X.crimeSQ, Y.crimeSQ, alpha = 1, nfolds=10)
+plot(crimes.lasso.cv.sq)
+coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]   # get the non=zero coefficients
+coef.min.sq  # the set of predictors chosen
+lasso.vars.sq = rownames(as.matrix(coef.min.sq)) # shows only names, not estimates  
+
+var.min.sq <- rownames(as.matrix(coef.min.sq)) # output the names
+lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(var.min.sq[-1], collapse = "+"))) # prepare for lm fomulae
+lm.input.sq
+
+fit.min.lm.sq <- lm(lm.input.sq, data=crime.final.noCat)
+lm.output.sq <- coef(fit.min.lm,sq) # output lm estimates
+summary(fit.min.lm.sq)
+```
+
 1. How many variables do you have now?
+After eliminating the variables with p values > 0.05, our final model is 
+$$Y = 1018 + 0.008623(race.pctblack*rent.qrange) + 0.9954(pct.not.hsgrad*male.pct.divorce) - 0.1459(pct.kids2parents*pct.workmom)$$
+There are 3 variables in this model, each of these variables is composed of two interacting variables. 
 
 2. Comparing the final models with the ones from **B)**, which one would you use? Commenting on your choice.
-
+Comparing with the final model from B, we would choose the model from B because it is easier to interpret than the interacting variables in B+, has less complex interactions, and requires less data to obtain a prediction (3 variables as opposed to 6 in B+). 
