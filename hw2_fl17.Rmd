@@ -246,21 +246,20 @@ Our goal is to find the factors which relate to violent crime. This variable is 
 
 ```{r, results='hide'}
 #Checking NAs
-na_count <- sapply(crime, function(y) sum(length(which(is.na(y)))))
+na_count <- sapply(crime, function(y) sum(length(which(is.na(y))))) #Can use sum(is.na(y)) ??????
 data.frame(na_count)
 ```
 
 ```{r, results='hide'}
 #Removing NAs
 crime2 <- crime[, -which(colMeans(is.na(crime)) > 0.5)]
-
 na_count <- sapply(crime2, function(y) sum(length(which(is.na(y)))))
 data.frame(na_count)
 ```
 
 ```{r, results='hide'}
 #Only keep violent crimes
-crime.final <- crime2[-c(106:121, 123)]
+crime.final <- crime2[-c(106:121, 123)] #What are we doing here????
 names(crime.final)
 ```
 
@@ -280,7 +279,7 @@ data.s <- crime.final %>%
     crime.rate=mean(violentcrimes.perpop, na.rm=TRUE), #ignore the missing values
     n=n())
 
-#Create a new data frame with mean income and corresponding state name
+#Create a new data frame with mean crime rate and corresponding state name
 crimerate <- data.s[, c("state", "crime.rate")]
 
 #Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
@@ -305,7 +304,7 @@ ggplot(map, aes(x=long, y=lat, group=group))+
   geom_text(data=crimerate, aes(x=center_lat, y=center_long, group=NA, 
                              label=state, size=2), show.legend =FALSE)+
   scale_fill_continuous(limits=c(0, 2000),name="Mean Crime Rate",
-                        low="light blue", high="dark blue")   # you may play the colors here
+                        low="light blue", high="dark blue", na.value="white")   
 ```
 ```{r, echo=F}
 #Mean income heatmap
@@ -321,7 +320,7 @@ income$center_long <- state.center$y[match(income$state, state.abb)]
 map2 <- merge(states, income, sort=FALSE, by="region", all.x=TRUE)
 
 #Re-establish the point order
-map2 <- map2[order(map2$order),]
+map2 <- map2[order(map2$order),] #What does this do????
 
 ggplot(map2, aes(x=long, y=lat, group=group))+
   geom_polygon(aes(fill=mean.income))+
@@ -329,7 +328,7 @@ ggplot(map2, aes(x=long, y=lat, group=group))+
   geom_text(data=income, aes(x=center_lat, y=center_long, group=NA, 
                              label=state, size=2), show.legend =FALSE)+
   scale_fill_continuous(limits=c(1000, 60000),name="Mean Income",
-                        low="light blue", high="dark blue")   # you may play the colors here
+                        low="pink", high="red", na.value="white")   
 ```
 ```{r, echo=F}
 # Mean unemployed percentage heatmap
@@ -354,7 +353,7 @@ ggplot(map3, aes(x=long, y=lat, group=group))+
   geom_text(data=unemp, aes(x=center_lat, y=center_long, group=NA, 
                              label=state, size=2), show.legend =FALSE)+
   scale_fill_continuous(limits=c(0, 10),name="Mean Unemployment Percentage",
-                        low="light blue", high="dark blue")   # you may play the colors here
+                        low="yellow", high="red", na.value = "white")   
 ```
 
 ```{r, include=F}
@@ -368,15 +367,22 @@ A quick summary: We've excluded all states except CA and FL while removing NA's 
 
 1. What is the model reported by LASSO? 
 
+i) LASSO Model
 ```{r}
 Y.crime <- crime.final.noCat[, 98]
 X.crime <- model.matrix(violentcrimes.perpop~., data=crime.final.noCat)
 crimes.lasso.cv <- cv.glmnet(X.crime, Y.crime, alpha = 1, nfolds=10)
 plot(crimes.lasso.cv)
-coef.min <- coef(crimes.lasso.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
-coef.min <- coef.min[which(coef.min !=0),]   # get the non=zero coefficients
-coef.min  # the set of predictors chosen
-lasso.vars = rownames(as.matrix(coef.min)) # shows only names, not estimates  
+```
+
+ii) Variable Estimation
+```{r}
+crimes.coef.min <- coef(crimes.lasso.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+crimes.coef.min <- crimes.coef.min[which(crimes.coef.min !=0),]   # get the non=zero coefficients
+
+lasso.vars <- rownames(as.matrix(crimes.coef.min)) # shows only names, not estimates 
+lasso.vars <- lasso.vars[-1] #Removing variable Intercept Needed????
+lasso.vars
 ```
 
 We choose lambda1se as our lambda after performing kfold cross validation to obtain a smaller set of variables than with lambdamin and arrive at a simpler model.  This is because we believe that many of these variables influence each other (beyond the scope of our assumption that variables are independent - many socioeconomic factors have a strong correlation in real life). It is best to arrive at a smallest as possible but still relevant set of variables to examine.
@@ -387,13 +393,12 @@ $$Y = 1810.355977 + 7.952891(race.pctblack) -18.222789(pct.kids2parents) + 78.47
 2. What is the model after running OLS?
 
 ```{r}
-var.min <- rownames(as.matrix(coef.min)) # output the names
-lm.input <- as.formula(paste("violentcrimes.perpop", "~", paste(var.min[-1], collapse = "+"))) # prepare for lm fomulae
-lm.input
+crimes.lm.input <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars, collapse = "+"))) # prepare for lm fomulae
+crimes.lm.input
 
-fit.min.lm <- lm(lm.input, data=crime.final.noCat)
-lm.output <- coef(fit.min.lm) # output lm estimates
-summary(fit.min.lm) 
+fit.crime.min.lm <- lm(crimes.lm.input, data=crime.final.noCat)
+crimes.lm.output <- coef(fit.crime.min.lm) # output lm estimates
+summary(fit.crime.min.lm) 
 ```
 The OLS model is $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
 
@@ -401,7 +406,7 @@ The OLS model is $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents
 
 Upon closer examination of the variables we are using, we notice that the p-values of all variables is < 0.05. This is most likely due to the fact that we've used lambda1se. Had we used lambdamin or another variable, the model is slightly more complex (it includes variables such as pct.house.vacant and num.in.shelters) of which some are above 0.05 and we would exclude. Our final model therefore remains the same as above and is:
 $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
-
+#Shoud we explain how we would have done otherwise?????
 
 **C)** Now, instead of Lasso, we want to consider how changing the value of alpha (i.e. mixing between Lasso and Ridge) will affect the model. Cross-validate between alpha and lambda, instead of just lambda. Note that the final model may have variables with p-values higher than 0.05; this is because we are optimizing for accuracy rather than parsimoniousness. 
 
@@ -414,19 +419,25 @@ $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.ki
 
 **B+)** Repeat similar stepts as that of **B)** but start with the set of variables that also include all two way interactions
 
+a) LASSO Model
 ```{r}
 Y.crimeSQ <- crime.final.noCat[, 98]
 X.crimeSQ <- model.matrix(violentcrimes.perpop~.+.*., data=crime.final.noCat)
 crimes.lasso.cv.sq <- cv.glmnet(X.crimeSQ, Y.crimeSQ, alpha = 1, nfolds=10)
 plot(crimes.lasso.cv.sq)
-coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
-coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]   # get the non=zero coefficients
-coef.min.sq  # the set of predictors chosen
-lasso.vars.sq = rownames(as.matrix(coef.min.sq)) # shows only names, not estimates  
+```
 
-var.min.sq <- rownames(as.matrix(coef.min.sq)) # output the names
-lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(var.min.sq[-1], collapse = "+"))) # prepare for lm fomulae
-lm.input.sq
+b) Variable Estimation
+```{r}
+coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]   
+lasso.vars.sq <- rownames(as.matrix(coef.min.sq)) 
+lasso.vars.sq
+```
+
+```{r}
+
+lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.sq[-1], collapse = "+"))) # prepare for lm fomulae
 
 fit.min.lm.sq <- lm(lm.input.sq, data=crime.final.noCat)
 lm.output.sq <- coef(fit.min.lm,sq) # output lm estimates
@@ -437,6 +448,8 @@ summary(fit.min.lm.sq)
 After eliminating the variables with p values > 0.05, our final model is 
 $$Y = 1018 + 0.008623(race.pctblack*rent.qrange) + 0.9954(pct.not.hsgrad*male.pct.divorce) - 0.1459(pct.kids2parents*pct.workmom)$$
 There are 3 variables in this model, each of these variables is composed of two interacting variables. 
+
+#Each time we run, we get a different model. Have to mention this??????
 
 2. Comparing the final models with the ones from **B)**, which one would you use? Commenting on your choice.
 Comparing with the final model from B, we would choose the model from B because it is easier to interpret than the interacting variables in B+, has less complex interactions, and requires less data to obtain a prediction (3 variables as opposed to 6 in B+). 
