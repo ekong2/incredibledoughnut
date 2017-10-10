@@ -29,22 +29,6 @@ This is homework #`r paste(hw_num)` of STAT 471/571/701. It will be **due on `r 
 
 Solutions will be posted. Make sure to go through these files to pick up some tips.
 
-## R Markdown / Knitr tips
-
-You should think of this R Markdown file as generating a polished report, one that you would be happy to show other people (or your boss). There shouldn't be any extraneous output; all graphs and code run should clearly have a reason to be run. That means that any output in the final file should have explanations.
-
-A few tips:
-
-* Keep each chunk to only output one thing! In R, if you're not doing an assignment (with the `<-` operator), it's probably going to print something.
-* If you don't want to print the R code you wrote (but want to run it, and want to show the results), use a chunk declaration like this: `{r, echo=F}`
-* If you don't want to show the results of the R code or the original code, use a chunk declaration like: `{r, include=F}`
-* If you don't want to show the results, but show the original code, use a chunk declaration like: `{r, results='hide'}`.
-* If you don't want to run the R code at all use `{r, eval = F}`.
-* We have shown examples in our lectures files. 
-* For more details about these R Markdown options, see the [documentation](http://yihui.name/knitr/options/).
-* **Delete the instructions and this R Markdown section, since they're not part of your overall report.**
-
-
 ```{r library, include=FALSE}
 # add your library imports here:
 library(dplyr)
@@ -185,10 +169,6 @@ coef(models.lasso.cv, s = "lambda.1se")
 ```
 We chose lambda.min to fit the model with the following coefficients:
 ```{r}
-coef.min <- coef(models.lasso.cv, s="lambda.min")  #s=c("lambda.1se","lambda.min") or lambda value
-coef.min <- coef.min[which(coef.min !=0),]   # get the non=zero coefficients
-var.min <- rownames(as.matrix(coef.min)) # output the names
-lm.input <- as.formula(paste("Y", "~", paste(var.min[-1], collapse = "+"))) # prepare for lm fomulae
 fit.min.lm <- lm(Y ~ x+x.2+x.3, data=df)
 coef(fit.min.lm) # output lm estimates
 ```
@@ -201,16 +181,49 @@ models.new <- regsubsets(Y.new ~ ., df.new, nvmax = 10, method='exhaustive')
 
 summ.new <- summary(models.new)
 
-best_cp <- which.min(summ.new$cp)
-best_bic <- which.min(summ.new$bic)
-best_adjr2 <- which.max(summ.new$adjr2)
+best_cp.new <- which.min(summ.new$cp)
+best_bic.new <- which.min(summ.new$bic)
+best_adjr2.ew <- which.max(summ.new$adjr2)
 ```
-The best model according to BIC is using `r best_bic` predictors, according to CP using `r best_cp` predictors and using Adjusted R^2 `r best_adjr2` predictors.
+The best model according to BIC is using `r best_bic.new` predictors, according to CP using `r best_cp.new` predictors and using Adjusted R^2 `r best_adjr2.new` predictors.
 
+```{r}
+par(mfrow=c(3, 1), mar=c(2.5, 4, 0.5, 1), mgp=c(1.5, 0.5, 0))
+plot(summ.new$cp, xlab="Number of predictors", 
+     ylab="cp", col="red", type="p", pch=16)
+plot(summ.new$bic, xlab="Number of predictors", 
+     ylab="bic", col="blue", type="p", pch=16)
+plot(summ.new$adjr2, xlab="Number of predictors", 
+     ylab="adjr2", col="green", type="p", pch=16)
+```
+
+The coefficients of the best model (using 1 predictor) are:
+```{r}
+coef(models.new, id = 1)
+```
+
+LASSO Model
 ```{r}
 X.lasso.new <- matrix(data=c(x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10),nrow=100)
 models.lasso.new <- cv.glmnet(X.lasso.new, Y.new, alpha = 1)
-coef(models.lasso.new, s="lambda.min")
+plot(models.lasso.new)
+```
+
+```{r}
+plot(models.lasso.new$lambda, models.lasso.new$cvm, xlab=expression(lambda), ylab="Mean cv error", col="red", pch=16)
+```
+The LASSO coefficients using lambda.min = `r models.lasso.new$lambda.min` are:
+```{r}
+coef(models.lasso.new, s = "lambda.min")
+```
+The LASSO coefficients using lambda.1se = `r models.lasso.new$lambda.1se` are:
+```{r}
+coef(models.lasso.new, s = "lambda.1se")
+```
+We chose lambda.min to fit the model with the following coefficients:
+```{r}
+fit.min.lm.new <- lm(Y.new ~ x.7, data=df)
+coef(fit.min.lm.new) # output lm estimates
 ```
 
 ## Problem 2: Regularization
