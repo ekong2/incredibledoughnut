@@ -175,7 +175,7 @@ coef(fit.min.lm) # output lm estimates
 
 #### (f)
 ```{r}
-Y.new = 0.3 + 7 * x^7 + epsilon
+Y.new = 0.3 + 2 * x^7 + epsilon
 df.new <- data.frame(Y.new, x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9, x^10)
 models.new <- regsubsets(Y.new ~ ., df.new, nvmax = 10, method='exhaustive')
 
@@ -223,7 +223,7 @@ coef(models.lasso.new, s = "lambda.1se")
 We chose lambda.min to fit the model with the following coefficients:
 ```{r}
 fit.min.lm.new <- lm(Y.new ~ x.7, data=df)
-coef(fit.min.lm.new) # output lm estimates
+coef(fit.min.lm.new)
 ```
 
 ## Problem 2: Regularization
@@ -246,7 +246,7 @@ Our goal is to find the factors which relate to violent crime. This variable is 
 
 ```{r, results='hide'}
 #Checking NAs
-na_count <- sapply(crime, function(y) sum(length(which(is.na(y))))) #Can use sum(is.na(y)) ??????
+na_count <- sapply(crime, function(y) sum(length(which(is.na(y)))))
 data.frame(na_count)
 ```
 
@@ -259,7 +259,7 @@ data.frame(na_count)
 
 ```{r, results='hide'}
 #Only keep violent crimes
-crime.final <- crime2[-c(106:121, 123)] #What are we doing here????
+crime.final <- crime2[-c(106:121, 123)]
 names(crime.final)
 ```
 
@@ -269,7 +269,7 @@ crime.final.noCat <- crime.final[-c(307),-c(1:3, 14, 29, 31, 75, 105)]
 ```
 
 
-```{r, echo=F}
+```{r}
 #Create Heatmap of USA crimerates
 data.s <- crime.final %>%
   group_by(state) %>%
@@ -306,7 +306,7 @@ ggplot(map, aes(x=long, y=lat, group=group))+
   scale_fill_continuous(limits=c(0, 2000),name="Mean Crime Rate",
                         low="light blue", high="dark blue", na.value="white")   
 ```
-```{r, echo=F}
+```{r}
 #Mean income heatmap
 income <- data.s[, c("state", "mean.income")]
 #Change abbreviations to names. eg: PA --> Pennsylvania, CA --> California
@@ -330,7 +330,7 @@ ggplot(map2, aes(x=long, y=lat, group=group))+
   scale_fill_continuous(limits=c(1000, 60000),name="Mean Income",
                         low="pink", high="red", na.value="white")   
 ```
-```{r, echo=F}
+```{r}
 # Mean unemployed percentage heatmap
 unemp <- data.s[, c("state", "mean.unemp")]
 
@@ -377,25 +377,26 @@ plot(crimes.lasso.cv)
 
 ii) Variable Estimation
 ```{r}
-crimes.coef.min <- coef(crimes.lasso.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+crimes.coef.min <- coef(crimes.lasso.cv, s="lambda.1se")  
 crimes.coef.min <- crimes.coef.min[which(crimes.coef.min !=0),]   # get the non=zero coefficients
 
 lasso.vars <- rownames(as.matrix(crimes.coef.min)) # shows only names, not estimates 
-lasso.vars <- lasso.vars[-1] #Removing variable Intercept Needed????
 lasso.vars
+
 ```
 
 We choose lambda1se as our lambda after performing kfold cross validation to obtain a smaller set of variables than with lambdamin and arrive at a simpler model.  This is because we believe that many of these variables influence each other (beyond the scope of our assumption that variables are independent - many socioeconomic factors have a strong correlation in real life). It is best to arrive at a smallest as possible but still relevant set of variables to examine.
 
-The model is `r crimes.coef.min`
-$$Y = 1810.355977 + 7.952891(race.pctblack) -18.222789(pct.kids2parents) + 78.476883(pct.kids.nvrmarried)$$
+The model is 
+```{r}
+crimes.coef.min
 
-#Keeps chaninging????
+```
 
 2. What is the model after running OLS?
 
 ```{r}
-crimes.lm.input <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars, collapse = "+"))) # prepare for lm fomulae
+crimes.lm.input <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars[-1], collapse = "+"))) # prepare for lm fomulae
 crimes.lm.input
 
 fit.crime.min.lm <- lm(crimes.lm.input, data=crime.final.noCat)
@@ -404,20 +405,17 @@ summary(fit.crime.min.lm)
 ```
 The OLS model is $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
 
-#Keeps chaninging????
-
 3. What is your final model, after excluding high p-value variables? You will need to use model selection method to obtain this final model. Make it clear what criterion/criteria you have used and justify why they are appropriate. 
 
 Upon closer examination of the variables we are using, we notice that the p-values of all variables is < 0.05. This is most likely due to the fact that we've used lambda1se. Had we used lambdamin or another variable, the model is slightly more complex (it includes variables such as pct.house.vacant and num.in.shelters) of which some are above 0.05 and we would exclude. Our final model therefore remains the same as above and is:
 $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
-
-#Keeps chaninging????
-#Shoud we explain how we would have done otherwise?????
+Since the variable p vaules > 0.05 we chose this model. Otherwise, we would have performed subset selection.
 
 **C)** Now, instead of Lasso, we want to consider how changing the value of alpha (i.e. mixing between Lasso and Ridge) will affect the model. Cross-validate between alpha and lambda, instead of just lambda. Note that the final model may have variables with p-values higher than 0.05; this is because we are optimizing for accuracy rather than parsimoniousness. 
 
 1. What is your final elastic net model? What were the alpha and lambda values? What is the prediction error?
 
+##REDO
 ```{r}
 fit.elastic.cv <- cv.glmnet(X.crime, Y.crime, alpha = 0.9, nfolds=10)
 plot(fit.elastic.cv)
@@ -430,7 +428,6 @@ Lambda min is `r fit.elastic.cv$lambda.min` and lambda 1se is `r fit.elastic.cv$
 
 The mean-squared error is `r ` and standard deviation is `r`
 
-#TODO????
 2. Use the elastic net variables in an OLS model. What is the equation, and what is the prediction error.
 
 ```{r}
@@ -452,7 +449,7 @@ The Prediction error is `r lm.output.elastic$sigma`
 
 3. Summarize your findings, with particular focus on the difference between the two equations.
  
- #TODO???
+#TODO???
 
 **B+)** Repeat similar stepts as that of **B)** but start with the set of variables that also include all two way interactions
 
@@ -466,15 +463,14 @@ plot(crimes.lasso.cv.sq)
 
 b) Variable Estimation
 ```{r}
-coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se") 
 coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]   
 lasso.vars.sq <- rownames(as.matrix(coef.min.sq)) 
-lasso.vars.sq <- lasso.vars.sq[-1]
 ```
 
 ```{r}
 
-lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.sq, collapse = "+"))) # prepare for lm fomulae
+lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.sq[-1], collapse = "+"))) # prepare for lm fomulae
 
 fit.min.lm.sq <- lm(lm.input.sq, data=crime.final.noCat)
 lm.output.sq <- coef(fit.min.lm.sq) # output lm estimates
