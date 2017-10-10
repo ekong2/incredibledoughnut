@@ -390,6 +390,8 @@ We choose lambda1se as our lambda after performing kfold cross validation to obt
 The model is `r coef.min`
 $$Y = 1810.355977 + 7.952891(race.pctblack) -18.222789(pct.kids2parents) + 78.476883(pct.kids.nvrmarried)$$
 
+#Keeps chaninging????
+
 2. What is the model after running OLS?
 
 ```{r}
@@ -402,20 +404,58 @@ summary(fit.crime.min.lm)
 ```
 The OLS model is $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
 
+#Keeps chaninging????
+
 3. What is your final model, after excluding high p-value variables? You will need to use model selection method to obtain this final model. Make it clear what criterion/criteria you have used and justify why they are appropriate. 
 
 Upon closer examination of the variables we are using, we notice that the p-values of all variables is < 0.05. This is most likely due to the fact that we've used lambda1se. Had we used lambdamin or another variable, the model is slightly more complex (it includes variables such as pct.house.vacant and num.in.shelters) of which some are above 0.05 and we would exclude. Our final model therefore remains the same as above and is:
 $$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
+
+#Keeps chaninging????
 #Shoud we explain how we would have done otherwise?????
 
 **C)** Now, instead of Lasso, we want to consider how changing the value of alpha (i.e. mixing between Lasso and Ridge) will affect the model. Cross-validate between alpha and lambda, instead of just lambda. Note that the final model may have variables with p-values higher than 0.05; this is because we are optimizing for accuracy rather than parsimoniousness. 
 
 1. What is your final elastic net model? What were the alpha and lambda values? What is the prediction error?
 
+```{r}
+fit.elastic.cv <- cv.glmnet(X.crime, Y.crime, alpha = 0.9, nfolds=10)
+plot(fit.elastic.cv)
+```
+
+This is our final elastic net model. We chose alpha to be close to 1 so that we can perform feature selection, yet benefit from Ridge Regression.
+The alpha value is 0.9, all the lambda values considered for cross-validation are:
+```{r}
+fit.elastic.cv$lambda
+```
+
+Lambda min is `r fit.elastic.cv$lambda.min` and lambda 1se is `r fit.elastic.cv$lambda.1se`
+
+The mean-squared error is `r fit.elastic.cv$cvm` and standard deviation is `r fit.elastic.cv$cvsd
+
+#Right????
 2. Use the elastic net variables in an OLS model. What is the equation, and what is the prediction error.
+
+```{r}
+coef.min.elastic <- coef(fit.elastic.cv, s="lambda.1se")  
+coef.min.elastic <- coef.min.elastic[which(coef.min.elastic !=0),]   
+lasso.vars.elastic <- rownames(as.matrix(coef.min.elastic)) 
+lasso.vars.elastic <- lasso.vars.elastic[-1]
+lm.input.elastic <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.elastic, collapse = "+"))) 
+
+fit.min.lm.elastic <- lm(lm.input.elastic, data=crime.final.noCat)
+lm.output.elastic <- summary(fit.min.lm.elastic)
+lm.output.elastic
+```
+The equation is:
+$$Y = 2012.949 + 13.956(race.pctblack) -22.678(pct.kids2parents) + 94.953(pct.kids.nvrmarried)$$
+The Prediction error is `r lm.output.elastic$sigma`
+
+#Check????
 
 3. Summarize your findings, with particular focus on the difference between the two equations.
  
+ #TODO???
 
 **B+)** Repeat similar stepts as that of **B)** but start with the set of variables that also include all two way interactions
 
@@ -432,15 +472,15 @@ b) Variable Estimation
 coef.min.sq <- coef(crimes.lasso.cv.sq, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
 coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]   
 lasso.vars.sq <- rownames(as.matrix(coef.min.sq)) 
-lasso.vars.sq
+lasso.vars.sq <- lasso.vars.sq[-1]
 ```
 
 ```{r}
 
-lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.sq[-1], collapse = "+"))) # prepare for lm fomulae
+lm.input.sq <- as.formula(paste("violentcrimes.perpop", "~", paste(lasso.vars.sq, collapse = "+"))) # prepare for lm fomulae
 
 fit.min.lm.sq <- lm(lm.input.sq, data=crime.final.noCat)
-lm.output.sq <- coef(fit.min.lm,sq) # output lm estimates
+lm.output.sq <- coef(fit.min.lm.sq) # output lm estimates
 summary(fit.min.lm.sq)
 ```
 
