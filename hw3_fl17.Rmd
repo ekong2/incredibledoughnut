@@ -1,9 +1,9 @@
 ---
 title: "Modern Data Mining - HW 3"
 author:
-- Group Member 1
-- Group Member 2
-- Group Member 3
+- Aditi Jayashankar
+- Eddie Kong
+- Sahana Vijaya Prasad
 output:
   html_document: default
   pdf_document: default
@@ -36,21 +36,6 @@ This is homework #`r paste(hw_num)` of STAT 471/571/701. It will be **due on `r 
 The data should load properly if you are working in Rstudio, *without needing to change your working directory*.
 
 Solutions will be posted. Make sure to compare your answers to and understand the solutions.
-
-## R Markdown / Knitr tips
-
-You should think of this R Markdown file as generating a polished report, one that you would be happy to show other people (or your boss). There shouldn't be any extraneous output; all graphs and code run should clearly have a reason to be run. That means that any output in the final file should have explanations.
-
-A couple tips:
-
-* Keep each chunk to only output one thing! In R, if you're not doing an assignment (with the `<-` operator), it's probably going to print something.
-* If you don't want to print the R code you wrote (but want to run it, and want to show the results), use a chunk declaration like this: `{r, echo=F}`
-* If you don't want to show the results of the R code or the original code, use a chunk declaration like: `{r, include=F}`
-* If you don't want to show the results, but show the original code, use a chunk declaration like: `{r, results='hide'}`.
-* If you don't want to run the R code at all use `{r, eval = F}`.
-* We show a few examples of these options in the below example code. 
-* For more details about these R Markdown options, see the [documentation](http://yihui.name/knitr/options/).
-* Delete the instructions and this R Markdown section, since they're not part of your overall report.
 
 ## Problem 0
 
@@ -258,7 +243,8 @@ summ2.b4 <- summ2$coefficients[5,1]
 summ2.b5 <- summ2$coefficients[6,1]
 summ2.b6 <- summ2$coefficients[7,1]
 ```
-The boundary is given by `r summ2.intercept` + `r summ2.b1`\*AGE + `r summ2.b2`\*SEX + `r summ2.b3`\*SBP + `r summ2.b4`\*CHOL +  `r summ2.b5`\*FRW + `r summ2.b6`\*CIG + $\geq$ `r prob1.logit`
+The boundary according to Bayes Rule is given by:
+`r summ2.intercept` + `r summ2.b1`\*AGE + `r summ2.b2`\*SEXMALE + `r summ2.b3`\*SBP + `r summ2.b4`\*CHOL +  `r summ2.b5`\*FRW + `r summ2.b6`\*CIG + $\geq$ `r prob1.logit`
 
 b. What is your estimated weighted misclassification error for this given risk ratio?
 ```{r}
@@ -319,14 +305,54 @@ Your job is to choose a best set of classifiers such that
 Here is what you need to report: 
 
 1. Write a summary about the goal of the project. Give some background information. If desired, you may go online to find out more information.
+
+The goal of the project is to develop and model useful for analysis and prediction. The first goal is to analyse i.e. determine what factors influence the passing of a bill. Second goal is to predict i.e., given data about a new bill, predict whether that bill would be passed or not.
+
 2. Give a preliminary summary of the data. 
+```{r}
+bill <- read.csv('Bills.subset.csv', na.strings = c("", "N/A", "?"))
+dim(bill)
+na_count <- sapply(bill, function(y) sum(length(which(is.na(y)))))
+data.frame(na_count)
+bill.train <- na.omit(bill) #Should we not omit???
+
+dim(bill.train)
+bill.train['num_status'] <- "0" #Create categorical status
+bill.train$num_status[bill.train$status == "bill:passed"] <- "1"
+bill.train$num_status[bill.train$status == "governor:signed"] <- "1"
+bill.train$num_status[bill.train$status == "governor:received"] <- "1"
+bill.train$num_status <- as.factor(bill.train$num_status)
+
+bill.train = bill.train[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors
+summary(bill.train) #Draw graphs??? 
+str(bill.train)
+```
+
 3. Based on the data available to you, you need to build a classifier. Provide the following information:
     *	The process of building your classifier
     *	Methods explored, and why you chose your final model
     *	Did you use a training and test set to build your classifier using the training data? If so, describe the process including information about the size of your training and test sets.
     *	What is the criterion being used to build your classifier?
     *	How do you estimate the quality of your classifier?
+    
+```{r}
+bill.fit1 <- glm(num_status~., bill.train, family=binomial)
+bill.fit2 <- update(bill.fit1, .~.-num_r_cosponsors)
+bill.fit3 <- update(bill.fit2, .~.-num_d_cosponsors)
+bill.fit4 <- update(bill.fit3, .~.-day.of.week.introduced)
+bill.fit5 <- update(bill.fit4, .~.-num_originating_committee_cosponsors_r)
+bill.fit6 <- update(bill.fit5, .~.-num_originating_committee_cosponsors_d)
+bill.fit7 <- update(bill.fit6, .~.-is_sponsor_in_leadership)
+Anova(bill.fit7)
+#anova(bill.fit1,  bill.fit7,  test="Chisq") How to interpret this???
+```
+
+* Exhautive search hanged.
+* Preformed backward model selection by eliminating the variables with highest p-value. Used Anova to determine the effect of categorical variable: all variables are significant at 0.001 level
+* Used 
+
 4. Suggestions you may have: what important features should have been collected which would have helped us to improve the quality of the classifiers.
+
 
 *Final notes*: The data is graciously lent from a friend. It is only meant for you to use in this class. All other uses are prohibited without permission. 
 
