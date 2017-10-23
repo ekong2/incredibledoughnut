@@ -15,7 +15,7 @@ knitr::opts_chunk$set(fig.height=4, fig.width=6, warning = F)
 if(!require('pacman')) {
   install.packages('pacman')
 }
-pacman::p_load(bestglm, pROC, leaps, car, tidyverse, mapproj, caret, xtable)
+pacman::p_load(glmnet,bestglm, pROC, leaps, car, tidyverse, mapproj, caret, xtable)
 # constants for homework assignments
 hw_num <- 3
 hw_due_date <- "22 October, 2017"
@@ -311,30 +311,64 @@ The goal of the project is to develop and model useful for analysis and predicti
 2. Give a preliminary summary of the data. 
 ```{r}
 bill <- read.csv('Bills.subset.csv', na.strings = c("", "N/A", "?"))
-dim(bill)
-na_count <- sapply(bill, function(y) sum(length(which(is.na(y)))))
-data.frame(na_count)
-bill.train <- na.omit(bill) #Should we not omit???
+#dim(bill)
+#na_count <- sapply(bill, function(y) sum(length(which(is.na(y)))))
+#data.frame(na_count)
+bill.train <- na.omit(bill)
 
-dim(bill.train)
+#dim(bill.train)
 bill.train['num_status'] <- "0" #Create categorical status
 bill.train$num_status[bill.train$status == "bill:passed"] <- "1"
 bill.train$num_status[bill.train$status == "governor:signed"] <- "1"
 bill.train$num_status[bill.train$status == "governor:received"] <- "1"
 bill.train$num_status <- as.factor(bill.train$num_status)
 
-bill.train = bill.train[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors which are linearly dependent
-summary(bill.train) #Draw graphs??? 
-str(bill.train)
+#Removing Bill ID as it wouldn't make much of a difference. Remove status as we've mapped the bill:signed, governor:signed and governor:received as SUCCESSFUL in num_status and num_cosponsors and num_originating_committee_cosponsors as these two variables are linearly dependent on the republican/democrat sponsors variables.
+bill.train = bill.train[,-c(1, 4, 11, 13)]  
+
+summary(bill.train)
+```
+
+```{r}
+#summary
+pairs(bill.train)
+#TODO: add histograms
 ```
 
 3. Based on the data available to you, you need to build a classifier. Provide the following information:
     *	The process of building your classifier
     *	Methods explored, and why you chose your final model
     *	Did you use a training and test set to build your classifier using the training data? If so, describe the process including information about the size of your training and test sets.
-    *	What is the criterion being used to build your classifier?
-    *	How do you estimate the quality of your classifier?
     
+    *	What is the criterion being used to build your classifier?
+    LASSO for dimensionality reduction and Ridge for stability
+    Model selection methods that are computationally efficient
+    Minimizing Mallow's Cp/AIC through model selection
+    
+    *	How do you estimate the quality of your classifier?
+    ROC curves, maximizing AUC.
+    Performance on test data set (accuracy, sensitivity, specificity)
+    
+```{r}
+bill.xy <- model.matrix(num_status~.+0, bill.train)
+bill.xy <- data.frame(bill.xy, bill.train$num_status)
+```
+    
+```{r, eval=F}
+#Exhaustive search, logreg
+bill.exhaustive <- bestglm(bill.xy, IC="AIC", nvmax=20, family=binomial, method="exhaustive")
+```
+
+```{r, eval=F}
+#Backwards selection, logreg
+bill.back <- bestglm(bill.xy, IC="AIC", family=binomial, method="backward")
+```
+
+```{r, eval=F}
+#Forwards selection, logreg
+bill.back <- bestglm(bill.xy, IC="AIC", family=binomial, method="forward")
+```
+
 ```{r}
 bill.fit1 <- glm(num_status~., bill.train, family=binomial)
 bill.fit2 <- update(bill.fit1, .~.-num_r_cosponsors)
@@ -344,18 +378,22 @@ bill.fit5 <- update(bill.fit4, .~.-num_originating_committee_cosponsors_r)
 bill.fit6 <- update(bill.fit5, .~.-num_originating_committee_cosponsors_d)
 bill.fit7 <- update(bill.fit6, .~.-is_sponsor_in_leadership)
 Anova(bill.fit7)
-#anova(bill.fit1,  bill.fit7,  test="Chisq") How to interpret this???
 ```
+
+```{r}
+anova(bill.fit1,  bill.fit7,  test="Chisq")
+```
+We see from anova that the variables we have removed are indeed not significant at the 0.05 level. We therefore have a reasonable model. 
 
 ```{r}
 #Load the test dataset and perform same precomputation
 bill.test <- read.csv('Bills.subset.test.csv', na.strings = c("", "N/A", "?"))
-dim(bill.test)
-na_count <- sapply(bill.test, function(y) sum(length(which(is.na(y)))))
-data.frame(na_count)
-bill.test <- na.omit(bill.test) #Should we not omit???
+#dim(bill.test)
+#na_count <- sapply(bill.test, function(y) sum(length(which(is.na(y)))))
+#data.frame(na_count)
+bill.test <- na.omit(bill.test)
 
-dim(bill.test)
+#dim(bill.test)
 bill.test['num_status'] <- "0" #Create categorical status
 bill.test$num_status[bill.test$status == "bill:passed"] <- "1"
 bill.test$num_status[bill.test$status == "governor:signed"] <- "1"
@@ -363,20 +401,57 @@ bill.test$num_status[bill.test$status == "governor:received"] <- "1"
 bill.test$num_status <- as.factor(bill.test$num_status)
 
 bill.test = bill.test[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors 
-summary(bill.test) #Draw graphs??? 
-str(bill.test)
+summary(bill.test) 
+#str(bill.test)
 ```
 ```{r}
 fitted.test <- predict(bill.fit7, bill.test, type="response")
 summary(fitted.test)
 ```
 
-* Exhautive search hanged.
-* Preformed backward model selection by eliminating the variables with highest p-value. Used Anova to determine the effect of categorical variable: all variables are significant at 0.001 level
-* Used 
+```{r}
+backwards.glm <- rep("0", 999) # prediction step 1: set up all values to be "0"
+backwards.glm[bill.fit7$fitted > 1/2] <- "1"  # prediction step 2 to get a classifier
+cm.backwards <- table(backwards.glm, bill.train$num_status)
+positive.pred1.backwards <- cm.backwards[2, 2] / (cm.backwards[2, 1] + cm.backwards[2, 2])
+positive.pred1.backwards
+
+negative.pred1.backwards <- cm.backwards[1,1] / (cm.backwards[1, 1] + cm.backwards[1, 2])
+negative.pred1.backwards
+
+cm.backwards
+```
+
+```{r}
+bill.fit7.roc <- roc(bill.train$num_status, bill.fit7$fitted, plot=T, col="blue")
+bill.fit7.auc <- pROC::auc(bill.fit7.roc)
+
+allpoints.backward <- coords(bill.fit7.roc, "all", ret=c("threshold", "specificity"))
+#get best threshold with specificity at 0.99 or greater
+bestThreshold.backward <- allpoints.backward[,allpoints.backward[2,]>.99][1,1]
+bestThreshold.backward
+```
+
+```{r}
+models.lasso.cv <- cv.glmnet(data.matrix(bill.xy[,-c(43)]), y=as.factor(bill.xy$bill.train.num_status), nfolds = 10, alpha=0.9, family="binomial")
+coef(models.lasso.cv, s = "lambda.min")
+
+coef.min.sq <- coef(models.lasso.cv, s="lambda.1se") 
+coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]
+lasso.vars.sq <- rownames(as.matrix(coef.min.sq))
+
+glm.input.sq <- as.formula(paste("num_status", "~", paste(lasso.vars.sq[-1], collapse = "+"))) # prepare for glm fomulae
+
+#trying to get the LASSO model to fit into glm
+bill.lasso.fit1 <- glm(glm.input.sq, bill.train, family=binomial)
+```
+
+* Exhaustive search, forward and backwards using bestglm hanged.
+* Preformed backward model selection manually by eliminating the variables with highest p-value. Used Anova to determine the effect of categorical variable: all variables are significant at 0.001 level
+* The positive prediction for this model is `r positive.pred1.backwards` and negative prediction is `r negative.pred1.backwards`. The AUC is `r bill.fit7.auc` which is quite good.
 
 4. Suggestions you may have: what important features should have been collected which would have helped us to improve the quality of the classifiers.
-
+A feature that would've potentially added more predictive power to our model are the actual text in the bills. If that were not possible then perhaps keywords to classify the jurisdiction or domain of the bill (eg. transportation, tax reform etc). Some interesting aspects to explore would've been to know whether the proposal came from a male or female legislator, time of day, and a subset of tweets that can give a reasonable overview of the public's state of mind or the political atmosphere/zeitgeist at the time (eg. Trump's tweets, what the popular topics on Twitter are, etc).
 
 *Final notes*: The data is graciously lent from a friend. It is only meant for you to use in this class. All other uses are prohibited without permission. 
 
