@@ -323,7 +323,7 @@ bill.train$num_status[bill.train$status == "governor:signed"] <- "1"
 bill.train$num_status[bill.train$status == "governor:received"] <- "1"
 bill.train$num_status <- as.factor(bill.train$num_status)
 
-bill.train = bill.train[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors
+bill.train = bill.train[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors which are linearly dependent
 summary(bill.train) #Draw graphs??? 
 str(bill.train)
 ```
@@ -345,6 +345,30 @@ bill.fit6 <- update(bill.fit5, .~.-num_originating_committee_cosponsors_d)
 bill.fit7 <- update(bill.fit6, .~.-is_sponsor_in_leadership)
 Anova(bill.fit7)
 #anova(bill.fit1,  bill.fit7,  test="Chisq") How to interpret this???
+```
+
+```{r}
+#Load the test dataset and perform same precomputation
+bill.test <- read.csv('Bills.subset.test.csv', na.strings = c("", "N/A", "?"))
+dim(bill.test)
+na_count <- sapply(bill.test, function(y) sum(length(which(is.na(y)))))
+data.frame(na_count)
+bill.test <- na.omit(bill.test) #Should we not omit???
+
+dim(bill.test)
+bill.test['num_status'] <- "0" #Create categorical status
+bill.test$num_status[bill.test$status == "bill:passed"] <- "1"
+bill.test$num_status[bill.test$status == "governor:signed"] <- "1"
+bill.test$num_status[bill.test$status == "governor:received"] <- "1"
+bill.test$num_status <- as.factor(bill.test$num_status)
+
+bill.test = bill.test[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors 
+summary(bill.test) #Draw graphs??? 
+str(bill.test)
+```
+```{r}
+fitted.test <- predict(bill.fit7, bill.test, type="response")
+summary(fitted.test)
 ```
 
 * Exhautive search hanged.
