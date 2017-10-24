@@ -5,8 +5,8 @@ author:
 - Eddie Kong
 - Sahana Vijaya Prasad
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
   word_document: default
 ---
 
@@ -18,7 +18,7 @@ if(!require('pacman')) {
 pacman::p_load(glmnet,bestglm, pROC, leaps, car, tidyverse, mapproj, caret, xtable)
 # constants for homework assignments
 hw_num <- 3
-hw_due_date <- "22 October, 2017"
+hw_due_date <- "24 October, 2017"
 ```
 
 
@@ -36,6 +36,21 @@ This is homework #`r paste(hw_num)` of STAT 471/571/701. It will be **due on `r 
 The data should load properly if you are working in Rstudio, *without needing to change your working directory*.
 
 Solutions will be posted. Make sure to compare your answers to and understand the solutions.
+
+## R Markdown / Knitr tips
+
+You should think of this R Markdown file as generating a polished report, one that you would be happy to show other people (or your boss). There shouldn't be any extraneous output; all graphs and code run should clearly have a reason to be run. That means that any output in the final file should have explanations.
+
+A couple tips:
+
+* Keep each chunk to only output one thing! In R, if you're not doing an assignment (with the `<-` operator), it's probably going to print something.
+* If you don't want to print the R code you wrote (but want to run it, and want to show the results), use a chunk declaration like this: `{r, echo=F}`
+* If you don't want to show the results of the R code or the original code, use a chunk declaration like: `{r, include=F}`
+* If you don't want to show the results, but show the original code, use a chunk declaration like: `{r, results='hide'}`.
+* If you don't want to run the R code at all use `{r, eval = F}`.
+* We show a few examples of these options in the below example code. 
+* For more details about these R Markdown options, see the [documentation](http://yihui.name/knitr/options/).
+* Delete the instructions and this R Markdown section, since they're not part of your overall report.
 
 ## Problem 0
 
@@ -97,7 +112,6 @@ fit1.7 <- glm(HD~SBP + CIG, hd_data.f, family=binomial)
 summary(fit1.7)
 ```
 i. Which single variable would be the most important to add? Add it to your model, and call the new fit `fit2`.  
-The most important is SEX. 
 
 We will pick up the variable either with highest $|z|$ value, or smallest $p$ value. From all the two variable models we see that `SEX` will be the most important addition on top of the SBP. And here is the summary report.
 ```{r the most important addition, results='asis', comment="   "}
@@ -109,26 +123,41 @@ fit2 <- glm(HD~SBP + SEX, hd_data.f, family=binomial)
 xtable(fit2)
 ```
 ii. Is the residual deviance of `fit2` always smaller than that of `fit1`? Why or why not?
-Yes, this is because fit1 is a nested submodel of fit2 and more of the data can be explained by the fuller model (as indicated by a lower RSS as well). Therefore, the residual deviance (deviance for the proposed model) must be smaller for fit2 than for fit1. 
-
+  
+Yes, this is because fit1 is a nested submodel of fit2 and adding another variable reduces residual deviance to account for the change in variation of the independent variable.
   
 iii. Perform both the Wald test and the Likelihood ratio tests (Chi-Squared) to see if the added variable is significant at the .01 level.  What are the p-values from each test? Are they the same? 
 
 ```{r}
-#Wald test
-wald.pval <- summary(fit2)$coefficients[3,4]
+summary(fit2)
+```
 
-#chi^2 test
+```{r}
+confint.default(fit2)
+```
+
+```{r}
+summary(fit2)$coefficients[3,4]
+```
+
+```{r}
 chi.sq <- summary(fit2)$null.deviance - summary(fit2)$deviance
 chi.pval <- pchisq(chi.sq, 2, lower.tail=FALSE)
+chi.pval
 ```
-The added SEX variable is signifcant at the 0.01 level. The p value for the Wald test is `r wald.pval` and the p value for the $\chi^2$ test is `r chi.pval`. They are similar but not the same.
+
+```{r}
+anova(fit2, test="Chisq") 
+```
+
+The added SEX variable is signifcant at the 0.01 level. The p value for the Wald test is `r wald.pval` and the p value for the $\chi^2$ test is `r chi.pval`. They are similar but not the same. Wald test is for individual variable, not the whole model.
 
 ### Part 1B -  Model building
 
 Start with all variables. Our goal is to fit a well-fitting model, that is still small and easy to interpret (parsimonious).
 
 i. Use backward selection method. Only keep variables whose coefficients are significantly different from 0 at .05 level. Kick out the variable with the largest p-value first, and then re-fit the model to see if there are other variables you want to kick out.
+
 ```{r}
 fit.model <- glm(HD~., hd_data.f, family=binomial)
 fit.model <- update(fit.model, .~. -DBP)
@@ -136,22 +165,35 @@ fit.model <- update(fit.model, .~. -FRW)
 fit.model <- update(fit.model, .~. -CIG)
 summary(fit.model)
 ```
+
+```{r}
+fit.model.predict <- predict(fit.model, hd_data.new, type="response")
+fit.model.predict
+```
+
 ii. Use AIC as the criterion for model selection. Find a model with small AIC through exhaustive search. Does exhaustive search  guarantee that the p-values for all the remaining variables are less than .05? Is our final model here the same as the model from backwards elimination? 
 
-The exhaustive search does not guarantee all variables will have p-values less than 0.05 since it is using AIC as its criterion for selecting the best model. Our final model is not the same as the one we have obtained through backwards selection. In fact, the exhaustive search model has CIG and FRW which were eliminated in the backwards elimination model.
 ```{r}
 Xy <- model.matrix(HD ~.+0, hd_data.f) 
 Xy <- data.frame(Xy, hd_data.f$HD)
 fit.all <- bestglm(Xy, family = binomial, method = "exhaustive", IC="AIC", nvmax = 10)
 summary(fit.all$BestModel)
 ```
-iii. Use the model chosen from part ii. as the final model. Write a brief summary to describe important factors relating to Heart Diseases (i.e. the relationships between those variables in the model and heart disease). Give a definition of “important factors”. 
-An important factor is a factor that is shown to have a relationship with blood disease from the data at a significance level of 0.05. The factors that are shown to increase the likelihood of heart disease are increasing age (aging), being male, higher systolic blood pressure (SBP), to a slightly less significant extent higher cholesterol levels and finally to an even lesser significant extent, increased cigarette consumption. 
 
-If we define importance to be at the 0.01 signifance level, the previous factors remain the same but we would exclude increased cigarette consumption.
+The exhaustive search does not guarantee all variables will have p-values less than 0.05 since it is using AIC as its criterion for selecting the best model. Our final model is not the same as the one we have obtained through backwards selection. In fact, the exhaustive search model has CIG and FRW which were eliminated in the backwards elimination model.
+
+iii. Use the model chosen from part ii. as the final model. Write a brief summary to describe important factors relating to Heart Diseases (i.e. the relationships between those variables in the model and heart disease). Give a definition of “important factors”. 
+
+```{r}
+fit.model.final <- glm(HD~AGE+SEX+SBP+CHOL+FRW+CIG, family=binomial, data=hd_data.f)
+summary(fit.model.final)
+```
+
+An important factor is a factor that is shown to have a relationship with blood disease from the data at a significance level of 0.05. The factors that are shown to increase the likelihood of heart disease are increasing age (aging), being male, higher systolic blood pressure (SBP), to a slightly less significant extent higher cholesterol levels and finally to an even lesser significant extent, increased cigarette consumption. 
 
 ### Part 1C - Prediction
 Liz is a patient with the following readings: `AGE=50, GENDER=FEMALE, SBP=110, DBP=80, CHOL=180, FRW=105, CIG=0`. What is the probability that she will have heart disease, according to our final model?
+
 ```{r}
 liz <- hd_data.new
 liz$AGE <- 50
@@ -161,10 +203,9 @@ liz$CHOL <- 180
 liz$FRW <- 105
 liz$CIG <- 0
 liz$SEXMALE <- 0
-liz.prob <- predict(fit.all$BestModel, liz, type="response")[1] # 
+liz.prob <- predict(fit.model.final, liz, type="response")[1] 
+liz.prob
 ```
-
-THe probability that Liz will have a heart disease is `r liz.prob`.
 
 ### Part 2 - Classification analysis
 
@@ -176,11 +217,17 @@ allpoints <- coords(fit1.roc, "all", ret=c("threshold", "specificity"))
 #get best threshold with specificity at 0.9 or greater
 bestThreshold <- allpoints[,allpoints[2,]>=0.9][1,1]
 ```
+
+```{r}
+plot(1-fit1.roc$specificities, fit1.roc$thresholds, col = "blue", xlab = "false positive", ylab = "threshold")
+abline(v = 0.1)
+```
+```{r}
+bestThreshold
+```
 The ROC curve graphs the True Positive Rate vs the False Positive Rate as we change the threshold for prediction in our classifier. Better classifiers have larger areas under the curve and have ROC curves that adhere as close as possible to the left border and upper border of the graph. The best threshold is predicting y=1 when P(y=1) > `r bestThreshold`.
 
 b. Overlay two ROC curves: one from `fit1`, the other from `fit2`. Does one curve always contain the other curve? Is the AUC of one curve always larger than the AUC of the other one? Why or why not?
-
-No, the ROC curve for fit2 does not entirely contain the ROC curve for fit1 because it's performance (specificity or sensitivity) is not better at all thresholds. However, fit2 performs better at many of the thresholds. This is most likely because fit2 contains a set of variables that are more relevant than fit1's that give it a better performance. Hence, the AUC for fit2's ROC curve is greater than fit1's AUC.
 
 ```{r}
 fit2.roc <- roc(hd_data.f$HD, fit2$fitted, plot=T, col="blue")
@@ -189,49 +236,62 @@ two.rocs <-plot(1-fit1.roc$specificities, fit1.roc$sensitivities, col="red", pch
      ylab="Sensitivity")
 points(1-fit2.roc$specificities, fit2.roc$sensitivities, col="blue", pch=16, cex=.6)
 title("Blue line is for fit2, and red for fit1")
+```
 
+```{r}
+#fit1
 pROC::auc(fit1.roc)
+#fit2
 pROC::auc(fit2.roc)
 ```
+
+No, the ROC curve for fit2 does not entirely contain the ROC curve for fit1 because it's performance (specificity or sensitivity) is not better at all thresholds. However, fit2 performs better at many of the thresholds. This is most likely because fit2 contains a set of variables that are more relevant than fit1's that give it a better performance. Hence, the AUC for fit2's ROC curve is greater than fit1's AUC. The only points the the two ROC curves will always have in common are (0,0) and (1,1).
 
 c. Estimate the Positive Prediction Values and Negative Prediction Values for `fit1` and `fit2` using .5 as a threshold. Which model is more desirable if we prioritize the Positive Prediction values?
 
 ```{r}
-fit1.pred.67 <- rep("0", 1393)   # prediction step 1: set up all values to be "0"
-fit1.pred.67[fit1$fitted > 1/2] <- "1"  # prediction step 2 to get a classifier
-cm.1 <- table(fit1.pred.67, hd_data.f$HD)
-positive.pred1 <- cm.1[2, 2] / (cm.1[2, 1] + cm.1[2, 2])
+fit1.pred.50 = rep("0", 1393)
+fit1.pred.50[fit1$fitted.values > 0.5] = "1"
+fit1.pred.50 = as.factor(fit1.pred.50)
+fit1.cm.50 = table(fit1.pred.50, hd_data.f$HD)
+fit1.cm.50
+```
+```{r}
+fit2.pred.50 = rep("0", 1393)
+fit2.pred.50[fit2$fitted.values > 0.5] = "1"
+fit2.pred.50 = as.factor(fit2.pred.50)
+fit2.cm.50 = table(fit2.pred.50, hd_data.f$HD)
+fit2.cm.50
+```
+```{r}
+positive.pred1 <- fit1.cm.50[2, 2] / (fit1.cm.50[2, 1] + fit1.cm.50[2, 2])
 positive.pred1
-
-negative.pred1 <- cm.1[1, 1] / (cm.1[1, 1] + cm.1[1, 2])
-negative.pred1
-
-fit2.pred.67 <- rep("0", 1393)   # prediction step 1: set up all values to be "0"
-fit2.pred.67[fit2$fitted > 1/2] <- "1"  # prediction step 2 to get a classifier
-cm.2 <- table(fit2.pred.67, hd_data.f$HD)
-positive.pred2 <- cm.2[2, 2] / (cm.2[2, 1] + cm.2[2, 2])
+```
+```{r}
+positive.pred2 <- fit2.cm.50[2, 2] / (fit2.cm.50[2, 1] + fit2.cm.50[2, 2])
 positive.pred2
-
-negative.pred2 <- cm.2[1, 1] / (cm.2[1, 1] + cm.2[1, 2])
+```
+```{r}
+negative.pred1 <- fit1.cm.50[1, 1] / (fit1.cm.50[1, 1] + fit1.cm.50[1, 2])
+negative.pred1
+```
+```{r}
+negative.pred2 <- fit2.cm.50[1, 1] / (fit2.cm.50[1, 1] + fit2.cm.50[1, 2])
 negative.pred2
 ```
 
 You would choose fit2 since `r positive.pred2` > `r positive.pred1`.
 
-
 d. (Optional/extra credit) For `fit1`: overlay two curves,  but put the threshold over the probability function as the x-axis and positive prediction values and the negative prediction values as the y-axis.  Overlay the same plot for `fit2`. Which model would you choose if the set of positive and negative prediction values are the concerns? If you can find an R package to do so, you may use it directly.
-
-```{r}
-#shouldn't be too bad, maybe ROCR?
-```
   
 ### Part 3 - Bayes Rule
 Bayes rules with risk ratio $\frac{a_{10}}{a_{01}}=10$ or $\frac{a_{10}}{a_{01}}=1$. Use your final model obtained from 1 B) to build a class of linear classifiers.
 
 
 a. Write down the linear boundary for the Bayes classifier if the risk ratio of $a_{10}/a_{01}=10$.
+
 ```{r}
-summ2 <- summary(fit.all$BestModel)
+summ2 <- summary(fit.model.final)
 prob1 <- 0.1/1.1
 prob1.logit <- log(prob1/(1-prob1))
 summ2$coefficients
@@ -247,9 +307,10 @@ The boundary according to Bayes Rule is given by:
 `r summ2.intercept` + `r summ2.b1`\*AGE + `r summ2.b2`\*SEXMALE + `r summ2.b3`\*SBP + `r summ2.b4`\*CHOL +  `r summ2.b5`\*FRW + `r summ2.b6`\*CIG + $\geq$ `r prob1.logit`
 
 b. What is your estimated weighted misclassification error for this given risk ratio?
+
 ```{r}
 fit1.pred.bayes <- rep("0", 1393)
-fit1.pred.bayes[fit.all$BestModel$fitted > prob1] = "1" 
+fit1.pred.bayes[fit.model.final$fitted > prob1] = "1" 
 MCE.fit1 <- (sum(10*(fit1.pred.bayes[hd_data.f$HD == "1"] != "1")) + sum(fit1.pred.bayes[hd_data.f$HD == "0"] != "0"))/length(hd_data.f$HD)
 MCE.fit1
 ```
@@ -257,15 +318,36 @@ MCE.fit1
 The estimated weighted misclassification error is `r MCE.fit1`.
 
 c. Recall Liz, our patient from part 1. How would you classify her under this classifier?
+
 <!-- this answer depends on the correct calculation of liz.prob in part C --> 
 We would classify her as not sick because `r liz.prob` $<$ `r prob1`.
 
 Now, draw two estimated curves where x = posterior threshold, and y = misclassification errors, corresponding to the thresholding rule given in x-axis.
 
-d. Use weighted misclassification error, and set $a_{10}/a_{01}=10$. How well does the Bayes rule classifier perform? 
+d. Use weighted misclassification error, and set $a_{10}/a_{01}=10$. How well does the Bayes rule classifier perform?
+
 ```{r}
+MCE.10 <- rep(NA, 10)
+count <- 1
+
+for(t in (1:10)/10){
+  temp <- rep("0", 1393)
+  temp[fit.model.final$fitted > t] = "1" 
+  MCE.10[count] <- (sum(10*(temp[hd_data.f$HD == "1"] != "1")) + sum(temp[hd_data.f$HD == "0"] != "0"))/length(hd_data.f$HD)
+  count <- count + 1
+}
+
+MCE.10
 ```
+
 e. Use weighted misclassification error, and set $a_{10}/a_{01}=1$. How well does the Bayes rule classifier perform? 
+
+```{r}
+fit1.pred.bayes.1 <- rep("0", 1393)
+fit1.pred.bayes.1[fit.model.final$fitted > 0.5] = "1" 
+MCE.fit1.1 <- (sum(1*(fit1.pred.bayes.1[hd_data.f$HD == "1"] != "1")) + sum(fit1.pred.bayes.1[hd_data.f$HD == "0"] != "0"))/length(hd_data.f$HD)
+MCE.fit1.1
+```
 
 ## Problem 2
 
@@ -309,148 +391,199 @@ Here is what you need to report:
 The goal of the project is to develop and model useful for analysis and prediction. The first goal is to analyse i.e. determine what factors influence the passing of a bill. Second goal is to predict i.e., given data about a new bill, predict whether that bill would be passed or not.
 
 2. Give a preliminary summary of the data. 
+
 ```{r}
-bill <- read.csv('Bills.subset.csv', na.strings = c("", "N/A", "?"))
-#dim(bill)
-#na_count <- sapply(bill, function(y) sum(length(which(is.na(y)))))
-#data.frame(na_count)
-bill.train <- na.omit(bill)
+bill.train <- read.csv('Bills.subset.csv', na.strings = c("", "N/A", "?"))
 
-#dim(bill.train)
-bill.train['num_status'] <- "0" #Create categorical status
-bill.train$num_status[bill.train$status == "bill:passed"] <- "1"
-bill.train$num_status[bill.train$status == "governor:signed"] <- "1"
-bill.train$num_status[bill.train$status == "governor:received"] <- "1"
-bill.train$num_status <- as.factor(bill.train$num_status)
+bill.train$status <- as.factor(as.numeric(bill.train$status %in% c("bill:passed", "governor:signed","governor:received")))
 
-#Removing Bill ID as it wouldn't make much of a difference. Remove status as we've mapped the bill:signed, governor:signed and governor:received as SUCCESSFUL in num_status and num_cosponsors and num_originating_committee_cosponsors as these two variables are linearly dependent on the republican/democrat sponsors variables.
-bill.train = bill.train[,-c(1, 4, 11, 13)]  
+#Removing Bill ID becuse it does not make sense as a predictor
+bill.train <- bill.train[,-c(1)]  
+bill.train <- na.omit(bill.train)
 
 summary(bill.train)
 ```
 
 ```{r}
-#summary
 pairs(bill.train)
-#TODO: add histograms
+```
+
+```{r}
+na_count <- sapply(bill.train, function(y) sum(length(which(is.na(y)))))
+data.frame(na_count)
+```
+
+```{r}
+str(bill.train)
 ```
 
 3. Based on the data available to you, you need to build a classifier. Provide the following information:
     *	The process of building your classifier
     *	Methods explored, and why you chose your final model
     *	Did you use a training and test set to build your classifier using the training data? If so, describe the process including information about the size of your training and test sets.
-    
     *	What is the criterion being used to build your classifier?
-    LASSO for dimensionality reduction and Ridge for stability
-    Model selection methods that are computationally efficient
-    Minimizing Mallow's Cp/AIC through model selection
-    
     *	How do you estimate the quality of your classifier?
-    ROC curves, maximizing AUC.
-    Performance on test data set (accuracy, sensitivity, specificity)
     
+First, we use all the predictors and assess the model.
+
 ```{r}
-bill.xy <- model.matrix(num_status~.+0, bill.train)
-bill.xy <- data.frame(bill.xy, bill.train$num_status)
-```
-    
-```{r, eval=F}
-#Exhaustive search, logreg
-bill.exhaustive <- bestglm(bill.xy, IC="AIC", nvmax=20, family=binomial, method="exhaustive")
-```
-
-```{r, eval=F}
-#Backwards selection, logreg
-bill.back <- bestglm(bill.xy, IC="AIC", family=binomial, method="backward")
-```
-
-```{r, eval=F}
-#Forwards selection, logreg
-bill.back <- bestglm(bill.xy, IC="AIC", family=binomial, method="forward")
+fit.bill.all <- glm(status~., bill.train, family=binomial)
+summary(fit.bill.all)
 ```
 
 ```{r}
-bill.fit1 <- glm(num_status~., bill.train, family=binomial)
-bill.fit2 <- update(bill.fit1, .~.-num_r_cosponsors)
-bill.fit3 <- update(bill.fit2, .~.-num_d_cosponsors)
-bill.fit4 <- update(bill.fit3, .~.-day.of.week.introduced)
-bill.fit5 <- update(bill.fit4, .~.-num_originating_committee_cosponsors_r)
-bill.fit6 <- update(bill.fit5, .~.-num_originating_committee_cosponsors_d)
-bill.fit7 <- update(bill.fit6, .~.-is_sponsor_in_leadership)
-Anova(bill.fit7)
+chi.sq <- 3318.4 - 2170.8
+pvalue <- pchisq(chi.sq, 14, lower.tail=FALSE)
+pvalue
+```
+
+The p-value lets us reject the null hypothesis. We use backward selection by throwing out insignificant varaibles to make our first model.
+
+```{r}
+bill.fit2 <- update(fit.bill.all, .~.-num_r_cosponsors -num_cosponsors -num_d_cosponsors)
+bill.fit3 <- update(bill.fit2, .~.-day.of.week.introduced)
+bill.fit4 <- update(bill.fit3, .~.-num_originating_committee_cosponsors_r -num_originating_committee_cosponsors_d -num_originating_committee_cosponsors)
+bill.fit.model1 <- update(bill.fit4, .~.-is_sponsor_in_leadership)
+Anova(bill.fit.model1)
 ```
 
 ```{r}
-anova(bill.fit1,  bill.fit7,  test="Chisq")
+chi.sq <- 3318.4 - 2182.6
+pchisq(chi.sq, 5, lower.tail=FALSE)
 ```
-We see from anova that the variables we have removed are indeed not significant at the 0.05 level. We therefore have a reasonable model. 
 
 ```{r}
-#Load the test dataset and perform same precomputation
+summary(bill.fit.model1)
+```
+Our model 1 is significant and uses the 5 predictors: sponsor_party, session, title_word_count, originating_committee and num_amendments.
+
+For our other model, we will use bestglm() with AIC
+
+```{r}
+Xy1 <- model.matrix(bill.train$status ~.+0, bill.train)
+Xy1 <- data.frame(Xy1, bill.train$status)
+#bill.fit.best<- bestglm(Xy1, family = binomial, method = "forward", IC="AIC", nvmax = 10)
+
+#There is not enough memory to process this.
+```
+
+Since memory is an issue, our other model will be derived using some interactions from our Model 1.
+
+```{r}
+test1 <- glm(status ~ sponsor_party + session + title_word_count + originating_committee*num_amendments + num_amendments, bill.train, family = binomial)
+summary(test1)
+Anova(test1)
+```
+
+```{r}
+test2 <- glm(status ~ sponsor_party *session + title_word_count + originating_committee + num_amendments, bill.train, family = binomial)
+summary(test2)
+Anova(test2)
+```
+
+```{r}
+chi.sq <- 3318.4 - 2133.1
+pchisq(chi.sq, 6, lower.tail=FALSE)
+bill.fit.model2 <- test2
+```
+
+We choose test2 as our second model. This Model 2 has an interaction between sponsor_party and session.
+
+```{r}
+#Prepare test data
 bill.test <- read.csv('Bills.subset.test.csv', na.strings = c("", "N/A", "?"))
-#dim(bill.test)
-#na_count <- sapply(bill.test, function(y) sum(length(which(is.na(y)))))
-#data.frame(na_count)
+bill.test$status <- as.factor(as.numeric(bill.test$status %in% c("bill:passed", "governor:signed","governor:received")))
+
+#Removing Bill ID becuse it does not make sense as a predictor
+bill.test <- bill.test[,-c(1)]  
 bill.test <- na.omit(bill.test)
-
-#dim(bill.test)
-bill.test['num_status'] <- "0" #Create categorical status
-bill.test$num_status[bill.test$status == "bill:passed"] <- "1"
-bill.test$num_status[bill.test$status == "governor:signed"] <- "1"
-bill.test$num_status[bill.test$status == "governor:received"] <- "1"
-bill.test$num_status <- as.factor(bill.test$num_status)
-
-bill.test = bill.test[,-c(1, 4, 11, 13)]  #Removing Bill ID as it wouldn't make much of a difference. Remove status and number sponsors 
-summary(bill.test) 
-#str(bill.test)
-```
-```{r}
-fitted.test <- predict(bill.fit7, bill.test, type="response")
-summary(fitted.test)
 ```
 
+We look at the confusion matrix for Model 1 and Model 2.
+
 ```{r}
-backwards.glm <- rep("0", 999) # prediction step 1: set up all values to be "0"
-backwards.glm[bill.fit7$fitted > 1/2] <- "1"  # prediction step 2 to get a classifier
-cm.backwards <- table(backwards.glm, bill.train$num_status)
-positive.pred1.backwards <- cm.backwards[2, 2] / (cm.backwards[2, 1] + cm.backwards[2, 2])
-positive.pred1.backwards
+model1.pred <- rep("0", 6647)
+model1.pred[bill.fit.model1$fitted > 1/2] <- "1" 
+cm.1 <- table(model1.pred, bill.train$status)
 
-negative.pred1.backwards <- cm.backwards[1,1] / (cm.backwards[1, 1] + cm.backwards[1, 2])
-negative.pred1.backwards
+cm.1
+```
+```{r}
+model2.pred <- rep("0", 6647)
+model2.pred[bill.fit.model2$fitted > 1/2] <- "1" 
+cm.2 <- table(model2.pred, bill.train$status)
 
-cm.backwards
+cm.2
 ```
 
-```{r}
-bill.fit7.roc <- roc(bill.train$num_status, bill.fit7$fitted, plot=T, col="blue")
-bill.fit7.auc <- pROC::auc(bill.fit7.roc)
+We look at the ROC and AUC
 
-allpoints.backward <- coords(bill.fit7.roc, "all", ret=c("threshold", "specificity"))
-#get best threshold with specificity at 0.99 or greater
-bestThreshold.backward <- allpoints.backward[,allpoints.backward[2,]>.99][1,1]
-bestThreshold.backward
+```{r}
+bill.roc1 <- roc(bill.train$status, bill.fit.model1$fitted, plot=T, col="blue")
+```
+```{r}
+plot(1-bill.roc1$specificities, bill.roc1$sensitivities, col="red", pch=16,
+     xlab="False Positive", 
+     ylab="Sensitivity")
 ```
 
 ```{r}
-models.lasso.cv <- cv.glmnet(data.matrix(bill.xy[,-c(43)]), y=as.factor(bill.xy$bill.train.num_status), nfolds = 10, alpha=0.9, family="binomial")
-coef(models.lasso.cv, s = "lambda.min")
-
-coef.min.sq <- coef(models.lasso.cv, s="lambda.1se") 
-coef.min.sq <- coef.min.sq[which(coef.min.sq !=0),]
-lasso.vars.sq <- rownames(as.matrix(coef.min.sq))
-
-glm.input.sq <- as.formula(paste("num_status", "~", paste(lasso.vars.sq[-1], collapse = "+"))) # prepare for glm fomulae
-
-#trying to get the LASSO model to fit into glm
-bill.lasso.fit1 <- glm(glm.input.sq, bill.train, family=binomial)
+bill.roc2 <- roc(bill.train$status, bill.fit.model2$fitted, plot=T, col="blue")
+```
+```{r}
+plot(1-bill.roc2$specificities, bill.roc2$sensitivities, col="red", pch=16,
+     xlab="False Positive", 
+     ylab="Sensitivity")
 ```
 
-* Exhaustive search, forward and backwards using bestglm hanged.
-* Preformed backward model selection manually by eliminating the variables with highest p-value. Used Anova to determine the effect of categorical variable: all variables are significant at 0.001 level
-* The positive prediction for this model is `r positive.pred1.backwards` and negative prediction is `r negative.pred1.backwards`. The AUC is `r bill.fit7.auc` which is quite good.
+
+```{r}
+pROC::auc(bill.roc1)
+pROC::auc(bill.roc2)
+```
+
+We predict for test data
+
+```{r}
+pred1 <- predict(bill.fit.model1, bill.test, type="response")
+pred2 <- predict(bill.fit.model2, bill.test, type="response")
+data.frame(pred1, pred2)
+```
+
+Plot ROC and calculate AUC for test data
+
+```{r}
+pred1.roc <- roc(bill.test$status, pred1, plot=T)
+```
+```{r}
+pROC::auc(pred1.roc)
+```
+
+```{r}
+pred2.roc <- roc(bill.test$status, pred2, plot=T)
+```
+
+```{r}
+pROC::auc(pred2.roc)
+```
+
+```{r}
+plot(1-pred1.roc$specificities, pred1.roc$sensitivities, col="red", pch=16,
+     xlab=paste("AUC(Model 1)=",round(auc(pred1.roc),2),"  AUC(Model 2)=",round(auc(pred2.roc),2) ), 
+     ylab="Sensitivities")   
+
+points(1-pred2.roc$specificities, pred2.roc$sensitivities, col="blue", pch=16)
+legend("topleft", legend=c("Model 1", "Model 2"),
+       lty=c(1,1), lwd=c(2,2), col=c("red", "blue"))
+title("Comparison of two models using testing data")
+
+```
+
+#TODO: Write summary of model chosen and why - choose model 1 because of AUC
+
 
 4. Suggestions you may have: what important features should have been collected which would have helped us to improve the quality of the classifiers.
+
 A feature that would've potentially added more predictive power to our model are the actual text in the bills. If that were not possible then perhaps keywords to classify the jurisdiction or domain of the bill (eg. transportation, tax reform etc). Some interesting aspects to explore would've been to know whether the proposal came from a male or female legislator, time of day, and a subset of tweets that can give a reasonable overview of the public's state of mind or the political atmosphere/zeitgeist at the time (eg. Trump's tweets, what the popular topics on Twitter are, etc).
 
 *Final notes*: The data is graciously lent from a friend. It is only meant for you to use in this class. All other uses are prohibited without permission. 
