@@ -37,21 +37,6 @@ The data should load properly if you are working in Rstudio, *without needing to
 
 Solutions will be posted. Make sure to compare your answers to and understand the solutions.
 
-## R Markdown / Knitr tips
-
-You should think of this R Markdown file as generating a polished report, one that you would be happy to show other people (or your boss). There shouldn't be any extraneous output; all graphs and code run should clearly have a reason to be run. That means that any output in the final file should have explanations.
-
-A couple tips:
-
-* Keep each chunk to only output one thing! In R, if you're not doing an assignment (with the `<-` operator), it's probably going to print something.
-* If you don't want to print the R code you wrote (but want to run it, and want to show the results), use a chunk declaration like this: `{r, echo=F}`
-* If you don't want to show the results of the R code or the original code, use a chunk declaration like: `{r, include=F}`
-* If you don't want to show the results, but show the original code, use a chunk declaration like: `{r, results='hide'}`.
-* If you don't want to run the R code at all use `{r, eval = F}`.
-* We show a few examples of these options in the below example code. 
-* For more details about these R Markdown options, see the [documentation](http://yihui.name/knitr/options/).
-* Delete the instructions and this R Markdown section, since they're not part of your overall report.
-
 ## Problem 0
 
 Review the code and concepts covered during lecture, in particular, logistic regression and classification. 
