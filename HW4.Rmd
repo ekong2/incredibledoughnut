@@ -1,0 +1,123 @@
+---
+title: "STAT 571 - HW4"
+author:
+- Aditi Jayashankar
+- Eddie Kong
+- Sahana Vijaya Prasad
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load all packages
+if(!require('pacman')) {
+  install.packages('pacman')}
+pacman::p_load( ISLR, tidyverse, tree, ramdomForest,  ISLR, rpart, rattle, pROC, partykit, gbm)
+```
+
+## Problem 1
+
+#### 1)
+
+```{r}
+set.seed(1)
+x.temp <- ceiling(runif(40, min=0, max=100))
+data1<- matrix(x.temp,ncol=2, byrow=TRUE )
+y <- round(rexp(nrow(data1), rate=2), 2)
+data1 <- data.frame(data1, y)
+names(data1)  <- c("X1", "X2", "Y1")
+
+data2 <- data1
+set.seed(1)
+data2$Y2 <- ifelse((data1$X1+data1$X2 > 70), rbinom(1,1,.62), rbinom(1,1, .31))
+data2
+```
+
+#### 2)
+
+```{r}
+# Set up an empty plot
+plot(NA, NA, type = "n", xlim = c(0,100), ylim = c(0,100), xlab = "X1", ylab = "X2", pch=16)
+# Draw some horizontal and vertical lines to divide the space into 6 regions
+lines(x = c(40,40), y = c(0,100))
+lines(x = c(0,40), y = c(75,75))
+lines(x = c(75,75), y = c(0,100))
+lines(x = c(20,20), y = c(0,75))
+lines(x = c(75,100), y = c(25,25))
+
+# Label the regions
+text(x = (40+75)/2, y = 50, labels = c("R1"))
+text(x = 20, y = (100+75)/2, labels = c("R2"))
+text(x = (75+100)/2, y = (100+25)/2, labels = c("R3"))
+text(x = (75+100)/2, y = 25/2, labels = c("R4"))
+text(x = 30, y = 75/2, labels = c("R5"))
+text(x = 10, y = 75/2, labels = c("R6"))
+
+points(data2$X1, data2$X2, pch=16, col='red')
+```
+##### i) 
+Yes.
+
+##### ii)
+R1
+
+##### iii)
+R4
+
+#### 3)
+
+```{r}
+tree.fit <- tree(Y1~X1+X2, data2)
+plot(tree.fit)
+text(tree.fit, pretty=0) 
+```
+
+Yes. The tree is different. This tree only uses X2 and has 3 nodes. The previous tree used X1 and X2 and had 6 nodes.
+
+#### 4)
+
+##### i)
+
+```{r}
+# Set up an empty plot
+plot(NA, NA, type = "n", xlim = c(0,100), ylim = c(0,100), xlab = "X1", ylab = "X2", pch=16, 
+   main = "Y2=0 in Red, Y2=1 in Blue")
+# Draw some horizontal and vertical lines to divide the space into 6 regions
+lines(x = c(40,40), y = c(0,100))
+lines(x = c(0,40), y = c(75,75))
+lines(x = c(75,75), y = c(0,100))
+lines(x = c(20,20), y = c(0,75))
+lines(x = c(75,100), y = c(25,25))
+
+# Label the regions
+text(x = (40+75)/2, y = 50, labels = c("R1"))
+text(x = 20, y = (100+75)/2, labels = c("R2"))
+text(x = (75+100)/2, y = (100+25)/2, labels = c("R3"))
+text(x = (75+100)/2, y = 25/2, labels = c("R4"))
+text(x = 30, y = 75/2, labels = c("R5"))
+text(x = 10, y = 75/2, labels = c("R6"))
+
+points(data2$X1[data2$Y2 == 0], data2$X2[data2$Y2 == 0], pch=16, col='red')
+points(data2$X1[data2$Y2 == 1], data2$X2[data2$Y2 == 1], pch=16, col='blue')
+```
+
+##### ii)
+
+6/8
+
+##### iii)
+
+Y2 = 1
+
+#### 5)
+
+```{r}
+tree.fit.2 <- rpart(Y2~X1+X2, data2)
+
+plot(as.party(tree.fit.2))
+```
+
+Yes. The tree is different because it only uses X1 to form the decision tree.
+
+## Problem 2
