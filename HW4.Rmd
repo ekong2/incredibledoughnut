@@ -8,7 +8,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.height=5, fig.width=11, warning = F)
 
 # Load all packages
 if(!require('pacman')) {
@@ -17,13 +17,20 @@ pacman::p_load( ISLR, tidyverse, tree, randomForest, rpart, partykit, gbm, car, 
 ```
 
 ## Problem 1
+Conceptual problem to get familiar with the building blocks for decision trees.
 
-#### 1)
+#### (1)
+A small data set is generated and it is stored in data2. It consists of four variables 
+
+Y1: a continuous response
+Y2: a binary response and 
+X1, X2 two continuous explanatory variables.
+
 
 ```{r}
 set.seed(1)
 x.temp <- ceiling(runif(40, min=0, max=100))
-data1<- matrix(x.temp,ncol=2, byrow=TRUE )
+data1 <- matrix(x.temp,ncol=2, byrow=TRUE )
 y <- round(rexp(nrow(data1), rate=2), 2)
 data1 <- data.frame(data1, y)
 names(data1)  <- c("X1", "X2", "Y1")
@@ -34,7 +41,8 @@ data2$Y2 <- ifelse((data1$X1+data1$X2 > 70), rbinom(1,1,.62), rbinom(1,1, .31))
 data2
 ```
 
-#### 2)
+#### (2)
+A diagram is drawn to partition X1 and X2 into R1, . R6 regions
 
 ```{r}
 # Set up an empty plot
@@ -56,16 +64,36 @@ text(x = 10, y = 75/2, labels = c("R6"))
 
 points(data2$X1, data2$X2, pch=16, col='red')
 ```
-##### i) 
-Yes.
 
-##### ii)
-R1
+#Please verify this question?????
+##### (i) 
+Is this a top-down, recursive tree? 
+Yes, because once we split we never go back, we keep going down.
 
-##### iii)
-R4
+Use this tree with data2 as the training data. Give the following predicted values of Y1 on the end nodes using X1 and X2:
+##### (ii)
+Predicted Y1 for x1=60, x2=30. 
 
-#### 3)
+This falls under Region 1. Adding the Y1 values of all the 8 points in R1 and taking the average,
+
+```{r}
+R1 <- c(0.15, 0.03, 0.198, 0.5, 0.16, 0.15, 0.36, 0.54)
+pred.1 <- sum(R1)/length(R1)
+```
+The predicted Y1 for x1=60, x2=30 is `r pred.1`
+
+##### (iii)
+Predicted Y1 for x1=90, x2=10.
+
+This falls under Region 4. Adding the Y1 values of the two points and taking the average,
+```{r}
+R4 <- c(0.12, 0.02)
+pred.2 <- sum(R4)/length(R4)
+```
+The predicted Y1 for x1=90, x2=10 is `r pred.2`
+
+#### (3)
+Use tree() to produce a best decision tree for Y1. Display the tree. Is this tree very different from the decision tree given in the diagram above? 
 
 ```{r}
 tree.fit <- tree(Y1~X1+X2, data2)
@@ -73,11 +101,13 @@ plot(tree.fit)
 text(tree.fit, pretty=0) 
 ```
 
-Yes. The tree is different. This tree only uses X2 and has 3 nodes. The previous tree used X1 and X2 and had 6 nodes.
+Yes, the tree is different from the decision tree given in the diagram above. This tree only uses X2 and has 3 terminal nodes. The previous tree used both X1 and X2, and had 6 terminal nodes.
 
-#### 4)
+#### (4)
+Let us now concentrate on classification decision trees. The event of interests is Y2=1. 
 
 ##### i)
+Overlay the labels Y2 for each subject in the original tree of the appendix. 
 
 ```{r}
 # Set up an empty plot
@@ -97,20 +127,27 @@ text(x = (75+100)/2, y = (100+25)/2, labels = c("R3"))
 text(x = (75+100)/2, y = 25/2, labels = c("R4"))
 text(x = 30, y = 75/2, labels = c("R5"))
 text(x = 10, y = 75/2, labels = c("R6"))
-
 points(data2$X1[data2$Y2 == 0], data2$X2[data2$Y2 == 0], pch=16, col='red')
 points(data2$X1[data2$Y2 == 1], data2$X2[data2$Y2 == 1], pch=16, col='blue')
+#points(data2$X1, data2$X2, pch=16, col='red')
+text(data2$X1, data2$X2+4, labels = data2$Y2)
 ```
 
+Data2 will be again the training data and we use sample proportion to estimate the probability of Y2=1 in each region. 
 ##### ii)
+Predicted Prob(Y2=1) for x1=60, x2=30
 
-6/8
+This falls under Region 1. There are 8 points in R1. 6 of them have Y2 = 1 and 2 have Y2 = 0.
+Therefore the Prob(Y2=1) for x1=60, x2=30 is 6/8.
 
 ##### iii)
+Give Y2's label for x1=60, x2=30 by majority vote. 
 
-Y2 = 1
+Since 6 out of the 8 points in Region 1 have Y2 = 1, by majority vote, label for x1=60, x2=30 is Y2 = 1
 
 #### 5)
+Apply rpart() by default to produce a decision classification tree and plot it. Is this tree different from our original tree? 
+#What's rpart????
 
 ```{r}
 tree.fit.2 <- rpart(Y2~X1+X2, data2)
@@ -118,7 +155,8 @@ tree.fit.2 <- rpart(Y2~X1+X2, data2)
 plot(as.party(tree.fit.2))
 ```
 
-Yes. The tree is different because it only uses X1 to form the decision tree.
+Yes, this tree is different from our original tree. This tree only uses X1 to form the decision tree, and has 3 terminal nodes. Our original tree used both X1 and X2, and had 6 terminal nodes.
+
 
 ## Problem 2
 ```{r}
