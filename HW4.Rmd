@@ -66,13 +66,11 @@ points(data2$X1, data2$X2, pch=16, col='red')
 ```
 
 # Please verify the new changes?????
-##### (i) 
-Is this a top-down, recursive tree? 
+##### (i) Is this a top-down, recursive tree? 
 Yes, because once we split we never go back, we keep going down.
 
 Use this tree with data2 as the training data. Give the following predicted values of Y1 on the end nodes using X1 and X2:
-##### (ii)
-Predicted Y1 for x1=60, x2=30. 
+##### (ii) Predicted Y1 for x1=60, x2=30. 
 
 This falls under Region 1. Adding the Y1 values of all the 8 points in R1 and taking the average,
 
@@ -82,8 +80,7 @@ pred.1 <- sum(R1)/length(R1)
 ```
 The predicted Y1 for x1=60, x2=30 is `r pred.1`
 
-##### (iii)
-Predicted Y1 for x1=90, x2=10.
+##### (iii) Predicted Y1 for x1=90, x2=10.
 
 This falls under Region 4. Adding the Y1 values of the two points and taking the average,
 ```{r}
@@ -92,7 +89,7 @@ pred.2 <- sum(R4)/length(R4)
 ```
 The predicted Y1 for x1=90, x2=10 is `r pred.2`
 
-#### (3)
+#### (3) 
 Use tree() to produce a best decision tree for Y1. Display the tree. Is this tree very different from the decision tree given in the diagram above? 
 
 ```{r}
@@ -103,11 +100,10 @@ text(tree.fit, pretty=0)
 
 Yes, the tree is different from the decision tree given in the diagram above. This tree only uses X2 and has 3 terminal nodes. The previous tree used both X1 and X2, and had 6 terminal nodes.
 
-#### (4)
+#### (4) 
 Let us now concentrate on classification decision trees. The event of interests is Y2=1. 
 
-##### (i)
-Overlay the labels Y2 for each subject in the original tree of the appendix. 
+##### (i) Overlay the labels Y2 for each subject in the original tree of the appendix. 
 
 ```{r}
 # Set up an empty plot
@@ -134,14 +130,12 @@ text(data2$X1, data2$X2+4, labels = data2$Y2)
 ```
 
 Data2 will be again the training data and we use sample proportion to estimate the probability of Y2=1 in each region. 
-##### (ii)
-Predicted Prob(Y2=1) for x1=60, x2=30
+##### (ii) Predicted Prob(Y2=1) for x1=60, x2=30
 
 This falls under Region 1. There are 8 points in R1. 6 of them have Y2 = 1 and 2 have Y2 = 0.
 Therefore the Prob(Y2=1) for x1=60, x2=30 is 6/8.
 
-##### (iii)
-Give Y2's label for x1=60, x2=30 by majority vote. 
+##### (iii) Give Y2's label for x1=60, x2=30 by majority vote. 
 
 Since 6 out of the 8 points in Region 1 have Y2 = 1, by majority vote, label for x1=60, x2=30 is Y2 = 1
 
