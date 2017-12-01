@@ -153,35 +153,56 @@ Yes, this tree is different from our original tree. This tree only uses X1 to fo
 
 
 ## Problem 2
+Exercise designed to understand PCA conceptually.
+
 ```{r}
 #load data set
 iq_data <- read.csv("IQ.Full.csv")
-```
-
-```{r}
 set.seed(10)
 
 #take subset of 100 subjects
 sample100 <- iq_data[sample(1:nrow(iq_data), 100,
-  	replace=FALSE),c("AFQT","Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")]
+  	replace=FALSE),c("Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")] #"AFQT" I think this should be removed????
+```
 
-#sample100.scale <- scale(sample100, center=TRUE, scale=TRUE)
+### (1)
+Let us first use PCA to summarize the ASVAB tests. Run prcomp over all the tests in ASVAB. We should center and scale all the tests.
 
+```{r}
 pc.asvab <- prcomp(sample100, scale=TRUE)
+```
 
+
+#### (a) Report the PC1 and PC2 loadings. Are they unit vectors? Are they uncorrelated? 
+```{r}
 pc1.loadings <- data.frame(pc.asvab$rotation[,"PC1"])
 pc2.loadings <- data.frame(pc.asvab$rotation[,"PC2"])
+cor(pc1.loadings, pc2.loadings)
 ```
-### 1)
-#### a) 
-PC1 and PC2 are uncorrelated and are both unit vectors. The loadings for PC1 and PC2 are
+
+# How can we tell they are uncorrelated???? 
+PC1 and PC2 are correlated as they value is nearly 0.159.
+
+```{r}
+sum(pc1.loadings^2)
+sum(pc2.loadings^2)
+```
+
+As the squares of the laodings add up to 1, they are unit vectors.
+
+The loadings for PC1 are:
 ```{r}
 pc1.loadings
+```
+
+The loadings for PC2 are:
+```{r}
 pc2.loadings
 ```
 
-#### b) 
-The PC1 score is obtained by substituting the PC1 loadings and each person's ASVAB scores into the following equation. $$Z_1 = \phi_{11}*X_1 + \phi_{12}*X_2 +  ... \phi_{101}*X_10 + \phi_{111}*X_11$$
+#### (b) How is the PC1 score obtained for each subject? Write down the correction.
+
+The PC1 score is obtained by substituting the PC1 loadings and each person's ASVAB scores into the following equation. $$Z_1 = \phi_{11}*X_1 + \phi_{12}*X_2 +  ... \phi_{19}*X_9 + \phi_{110}*X_10$$
 
  More concretely, it is Z1 = `r pc1.loadings[,1][1]` * X1 + 
  `r pc1.loadings[,1][2]` * X2 + 
@@ -192,13 +213,19 @@ The PC1 score is obtained by substituting the PC1 loadings and each person's ASV
  `r pc1.loadings[,1][7]` * X7 + 
  `r pc1.loadings[,1][8]` * X8 + 
  `r pc1.loadings[,1][9]` * X9 + 
- `r pc1.loadings[,1][10]` * X10 + 
- `r pc1.loadings[,1][11]` * X11
+ `r pc1.loadings[,1][10]` * X10 
  
-#### c) 
-The scores are uncorrelated.
+#### (c) Are PC1 scores and PC2 scores in the data uncorrelated? 
 
-#### d) 
+```{r}
+pc1.scores <- data.frame(pc.asvab$x[,"PC1"])
+pc2.scores <- data.frame(pc.asvab$x[,"PC2"])
+cor(pc1.scores, pc2.scores)
+```
+
+Yes, PC1 and PC2 scores are uncorrelated. We can verify that from the small value obtained above.
+
+#### (d) Plot PVE (Proportion of Variance Explained) with an explanation.
 
 ```{r}
 pve.asvab <- 100* (pc.asvab$sdev)^2/sum ((pc.asvab$sdev)^2)
@@ -207,14 +234,15 @@ plot(pve.asvab, pch=16,
      ylab="Prop. of variance explained",
      main="PVE ASVAB plot")
 ```
+
 This graph shows the proportion of the total variance that each principal component explains. The first component explains `r pve.asvab[1]`% of the total variance, the second PC component explains `r pve.asvab[2]`% of the total variance and so on.
 
-#### e)
+#### (e) Also plot CPVE (Cumulative Proportion of Variance Explained). What proportion of the variance in the data is explained by the first two principal components?
 ```{r}
-cpve.asvab <- 100*cumsum((pc.asvab$sdev)^2)/11   
+cpve.asvab <- 100*cumsum((pc.asvab$sdev)^2)/10   
 
 # Scree plot of CPVE's
-plot(seq(1:11), cpve.asvab, pch=16, ylim=c(0, 100),
+plot(seq(1:10), cpve.asvab, pch=16, ylim=c(0, 100),
      main="Cumulative Proportion of Variance Explained",
      xlab="Number of PC's Used")
 
@@ -222,7 +250,9 @@ first2pcvariance <- cpve.asvab[2]
 ```
 The first two components explain `r first2pcvariance`% of the total variance.
 
-#### f)
+#### (f) PC's provide us with a low dimensional view of the ASVAB. Use a biplot to display the data, using the first two principal components. Give an interpretation from the plot.
+
+# For biplot, she has used the biplot function in the notes, should we use that??
 ```{r}
 plot(pc.asvab$x[, 1], pc.asvab$x[, 2],
      xlim=c(-10, 10), ylim=c(-10, 10),
@@ -231,9 +261,12 @@ plot(pc.asvab$x[, 1], pc.asvab$x[, 2],
 abline(v=0, h=0)
 ```
 Here we plot PC1 as the x-axis and PC2 as the y-axis. We can see that the graph has an overall flattened oval shape which closely matches what we expect. PC1 has higher variability and so we expect its "spread" to be greater than PC2's. 
-TODO: need to explain what each PC is/contains
+# TODO: need to explain what each PC is/contains??
 
-#### g)
+#### (g) Repeat the above biplot but label points with different colors, according to their Gender. Do you see a systematic separation between Male and Female in the biplot? Write a brief summary about your findings.
+
+# Use biplot function??
+
 ```{r}
 plot(pc.asvab$x[, 1], pc.asvab$x[, 2], col=iq_data$Gender,
      xlim=c(-10, 10), ylim=c(-10, 10),
@@ -244,10 +277,15 @@ legend("bottomright", legend=c(as.character(levels(iq_data$Gender))),
 ```
 
 There seems to be no systematic separation between Female and Male using just these two principal components.
-TODO: needs to be elaborated, specifically what PCS each mean.
+# TODO: needs to be elaborated, specifically what PCS each mean.??
 
-### 2)
-#### a)
+### (2) 
+We next will try to summarize the 10 Esteem measurement by PCA
+
+#### (a) First, notice that Esteem 1, 2, 4, 6, and 7 need to be reversed prior to scoring in order for a higher score to designate higher self-esteem. 
+
+# Should we take subset of 100??
+
 ```{r}
 set.seed(10)
 
@@ -259,7 +297,8 @@ esteem100 <- iq_data[sample(1:nrow(iq_data), 100,
 esteem100[,  c(1, 2, 4, 6, 7)]  <- 5- esteem100[,  c(1, 2, 4, 6, 7)]
 ```
 
-#### b)
+#### (b) What are the PC1 loadings? 
+
 ```{r}
 #esteem100.scale <- scale(esteem100, center=TRUE, scale=TRUE)
 pc.esteem <- prcomp(esteem100, scale=TRUE)
@@ -270,7 +309,8 @@ The loadings for PC1 are
 pc1.esteem.loadings
 ```
 
-#### c)
+#### (c) How much variance is explained by using the PC1? Provide both PVE and CPVE plots
+
 ```{r}
 # PVE plot
 pve.esteem <- 100* (pc.esteem$sdev)^2/sum ((pc.esteem$sdev)^2)
@@ -278,7 +318,9 @@ plot(pve.esteem, pch=16,
      xlab="Principal Components",
      ylab="Prop. of variance explained",
      main="PVE esteem plot")
+```
 
+```{r}
 cpve.esteem <- 100*cumsum((pc.esteem$sdev)^2)/10   
 
 # Scree plot of CPVE's
@@ -289,7 +331,10 @@ plot(seq(1:10), cpve.esteem, pch=16, ylim=c(0, 100),
 ```
 PC1 explains `r pve.esteem[1]`% of the total variance.
 
-#### d)
+#### (d) Combine c) and the biplot of the PC1 and PC2 write a brief summary about Esteem 
+
+# How to combine and should we use biplot??
+
 ```{r}
 plot(pc.esteem$x[, 1], pc.esteem$x[, 2],
      xlim=c(-10, 10), ylim=c(-10, 10),
@@ -297,40 +342,55 @@ plot(pc.esteem$x[, 1], pc.esteem$x[, 2],
      main = "Biplot of the 2 main esteem PC's")
 abline(v=0, h=0)
 ```
-TODO: brief summary of esteem scores
+# TODO: brief summary of esteem scores ??
 
-### 3)
-#### a)
+### (3)
+How well can we predict 'success' based on Intelligence? 
+To answer this question, we use Income <- log(Income2005) as a measure of one's success.
+
+#### (a) Why is it important to create a logarithmic transformation of income?
+
 It is important to use the logarithmic transformation for income because a unit increase at high amounts of income means less than a unit increase at a low income (poor student vs wealthy professor example from class where 10$ means more to the student than professor). Adjusting it to a logarithmic scale adjusts for the nature appropriately.
 
-#### b)
+#### (b) Run prcomp over ASVAB tests first.
+
+# Remove AFQT??
+
 ```{r}
 pc.asvab.all <- prcomp(iq_data[,c("AFQT","Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")], scale=TRUE)
 ```
 
-#### c)
+#### (c) fit1: Income ~ PC1; fit2: Income ~ PC1+PC2+PC3. Notice the LS estimates of PC1 in both fit1 and fit2 are identical. Why is this so? Are the leading PC's of ASVAB significant variables to predict Income? 
+
 ```{r}
 logIncome <- log(iq_data$Income2005)
 data.b.pc <- data.frame(logIncome, pc.asvab.all$x)
 fit1 <- lm(logIncome~PC1, data.b.pc)
-fit2 <- lm(logIncome~PC1+PC2+PC3+PC4+PC5, data.b.pc)
+
 summary(fit1)
+```
+
+```{r}
+fit2 <- lm(logIncome~PC1+PC2+PC3+PC4+PC5, data.b.pc)
 summary(fit2)
+```
 
-#Anova(fit1)
-#Anova(fit2)
 
-cpve.asvab.all <- 100*cumsum((pc.asvab.all$sdev)^2)/11   
+If variables are uncorrelated, the LS estimates are the same in both simple and multiple linear regression. As all the PC values are uncorrelated, the LS estimates of PC1 in both fit1 and fit2 are identical.
+
+```{r}
+cpve.asvab.all <- 100*cumsum((pc.asvab.all$sdev)^2)/11  #10??? 
 
 # Scree plot of CPVE's
 plot(seq(1:11), cpve.asvab.all, pch=16, ylim=c(0, 100),
      main="Cumulative Proportion of Variance Explained",
      xlab="Number of PC's Used")
 ```
-TODO: why is the LS estimate for fit1 and fit2 identical for PC1??
+
 Using the elbow rule on the CPVE plot, we take the first 5 leading PCs. The 5 leading PCs are significant at the 0.05 level for predicting Income. However, PC1, PC2, PC4 and PC5 are significant at the 0.001 level.
 
-#### d)
+#### (d) Controlling for Personal Demographic Variables and Household Environment, are the leading PC's of ASVAB significant variables to predict Income at .01 level? Give a brief summary of your findings. 
+
 ```{r}
 data.b.pc.control <- data.frame(logIncome, pc.asvab.all$x, iq_data[,c("Race","Gender","Educ")], iq_data[,c("Imagazine","Inewspaper","Ilibrary","MotherEd","FatherEd")])
 
@@ -338,9 +398,12 @@ fit3 <- lm(logIncome~PC1+PC2+PC3+PC4+PC5+Imagazine+Inewspaper+Ilibrary+MotherEd+
 
 Anova(fit3)
 ```
-Yes, controlling for personal demographic variables and household environment variables, the leading 5 PCs are significant at the 0.01 level for predicting income. TODO: need to explain what each of the PCs are
+Yes, controlling for personal demographic variables and household environment variables, the leading 5 PCs are significant at the 0.01 level for predicting income. 
+
+# TODO: need to explain what each of the PCs are ????
 
 ## Problem 3
+
 ### 1)
 ```{r}
 yelp.data <- read.csv("yelp_subset.csv", as.is=TRUE)
