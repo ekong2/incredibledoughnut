@@ -65,7 +65,7 @@ text(x = 10, y = 75/2, labels = c("R6"))
 points(data2$X1, data2$X2, pch=16, col='red')
 ```
 
-# Please verify the new changes?????
+
 ##### (i) Is this a top-down, recursive tree? 
 Yes, because once we split we never go back, we keep going down.
 
@@ -141,7 +141,7 @@ Since 6 out of the 8 points in Region 1 have Y2 = 1, by majority vote, label for
 
 #### (5)
 Apply rpart() by default to produce a decision classification tree and plot it. Is this tree different from our original tree? 
-# What's rpart????
+
 
 ```{r}
 tree.fit.2 <- rpart(Y2~X1+X2, data2)
@@ -180,8 +180,7 @@ pc2.loadings <- data.frame(pc.asvab$rotation[,"PC2"])
 cor(pc1.loadings, pc2.loadings)
 ```
 
-# How can we tell they are uncorrelated???? 
-PC1 and PC2 are correlated as they value is nearly 0.159.
+PC1 and PC2 are uncorrelated in vector space. Their correlation value is 0.159.
 
 ```{r}
 sum(pc1.loadings^2)
@@ -252,20 +251,20 @@ The first two components explain `r first2pcvariance`% of the total variance.
 
 #### (f) PC's provide us with a low dimensional view of the ASVAB. Use a biplot to display the data, using the first two principal components. Give an interpretation from the plot.
 
-# For biplot, she has used the biplot function in the notes, should we use that??
+
 ```{r}
-plot(pc.asvab$x[, 1], pc.asvab$x[, 2],
-     xlim=c(-10, 10), ylim=c(-10, 10),
-     xlab="PC1", ylab="PC2",
-     main = "Biplot of the 2 main PC's")
+lim <- c(-0.3, 0.3) 
+biplot(pc.asvab, xlim=lim,
+       ylim=lim,
+       main="Biplot of the PC's")
 abline(v=0, h=0)
 ```
 Here we plot PC1 as the x-axis and PC2 as the y-axis. We can see that the graph has an overall flattened oval shape which closely matches what we expect. PC1 has higher variability and so we expect its "spread" to be greater than PC2's. 
-# TODO: need to explain what each PC is/contains??
+
+The angle between the vectors indicates the correlation between them. From the plot we can see that Word and Math scores are highly correlated. The five scores: Numer, Parag, Word, Math and Arith vectors are close to eachother, which shows that there is high correlation between them. The points that are furthest in the left corner are those with the highest scores in all the areas, while the ones in the right are those with the lowest scores. The points which are in the top quadrants are those who scored higher in Coding, Word, Parag, Numer, Math compared to the other scores, while the ones in the bottom quadrants are those who scored higher in Auto, Mechanic, Elec and Science.
+
 
 #### (g) Repeat the above biplot but label points with different colors, according to their Gender. Do you see a systematic separation between Male and Female in the biplot? Write a brief summary about your findings.
-
-# Use biplot function??
 
 ```{r}
 plot(pc.asvab$x[, 1], pc.asvab$x[, 2], col=iq_data$Gender,
@@ -277,14 +276,12 @@ legend("bottomright", legend=c(as.character(levels(iq_data$Gender))),
 ```
 
 There seems to be no systematic separation between Female and Male using just these two principal components.
-# TODO: needs to be elaborated, specifically what PCS each mean.??
+
 
 ### (2) 
 We next will try to summarize the 10 Esteem measurement by PCA
 
 #### (a) First, notice that Esteem 1, 2, 4, 6, and 7 need to be reversed prior to scoring in order for a higher score to designate higher self-esteem. 
-
-# Should we take subset of 100??
 
 ```{r}
 set.seed(10)
@@ -333,16 +330,15 @@ PC1 explains `r pve.esteem[1]`% of the total variance.
 
 #### (d) Combine c) and the biplot of the PC1 and PC2 write a brief summary about Esteem 
 
-# How to combine and should we use biplot??
 
 ```{r}
-plot(pc.esteem$x[, 1], pc.esteem$x[, 2],
-     xlim=c(-10, 10), ylim=c(-10, 10),
-     xlab="PC1", ylab="PC2",
-     main = "Biplot of the 2 main esteem PC's")
+lim <- c(-0.3, 0.3) 
+biplot(pc.esteem, xlim=lim,
+       ylim=lim,
+       main="Biplot of the esteem PC's")
 abline(v=0, h=0)
 ```
-# TODO: brief summary of esteem scores ??
+Some of the Esteem scores seem highly correlated with one another. Esteem2 and Esteem4 scores are highly correlated with eachother, while Esteem3, Esteem5, Esteem6 and Esteem7 scores are highly correlated with eachother. The points which are on the left side score higher among all the Esteem scores while the ones on the right score lower.
 
 ### (3)
 How well can we predict 'success' based on Intelligence? 
@@ -354,10 +350,10 @@ It is important to use the logarithmic transformation for income because a unit 
 
 #### (b) Run prcomp over ASVAB tests first.
 
-
 ```{r}
 pc.asvab.all <- prcomp(iq_data[,c("Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")], scale=TRUE)
 ```
+
 
 #### (c) fit1: Income ~ PC1; fit2: Income ~ PC1+PC2+PC3. Notice the LS estimates of PC1 in both fit1 and fit2 are identical. Why is this so? Are the leading PC's of ASVAB significant variables to predict Income? 
 
@@ -381,25 +377,24 @@ If variables are uncorrelated, the LS estimates are the same in both simple and 
 cpve.asvab.all <- 100*cumsum((pc.asvab.all$sdev)^2)/10  
 
 # Scree plot of CPVE's
-plot(seq(1:11), cpve.asvab.all, pch=16, ylim=c(0, 100),
+plot(seq(1:10), cpve.asvab.all, pch=16, ylim=c(0, 100),
      main="Cumulative Proportion of Variance Explained",
      xlab="Number of PC's Used")
 ```
 
 Using the elbow rule on the CPVE plot, we take the first 5 leading PCs. The 5 leading PCs are significant at the 0.05 level for predicting Income. However, PC1, PC2, PC4 and PC5 are significant at the 0.001 level.
 
+
 #### (d) Controlling for Personal Demographic Variables and Household Environment, are the leading PC's of ASVAB significant variables to predict Income at .01 level? Give a brief summary of your findings. 
 
 ```{r}
 data.b.pc.control <- data.frame(logIncome, pc.asvab.all$x, iq_data[,c("Race","Gender","Educ")], iq_data[,c("Imagazine","Inewspaper","Ilibrary","MotherEd","FatherEd")])
 
-fit3 <- lm(logIncome~PC1+PC2+PC3+PC4+PC5+Imagazine+Inewspaper+Ilibrary+MotherEd+FatherEd, data.b.pc.control)
+fit3 <- lm(logIncome~PC1+PC2+PC3+PC4+PC5+Imagazine+Inewspaper+Ilibrary+MotherEd+FatherEd+Race+Gender+Educ, data.b.pc.control)
 
 Anova(fit3)
 ```
-Yes, controlling for personal demographic variables and household environment variables, the leading 5 PCs are significant at the 0.01 level for predicting income. 
-
-# TODO: need to explain what each of the PCs are ????
+Controlling for personal demographic variables and household environment variables, the leading 5 PCs are not significant at the 0.01 level for predicting income. However, they are significant at 0.05 level.
 
 ## Problem 3 Case study: Yelp review 
 
@@ -417,8 +412,7 @@ yelp.sample <- yelp.data[sample(1:nrow(yelp.data), 20000,
   	replace=FALSE),]
 
 # 1. Make corpus which is collection of texts
-# VCorpus (Volatile Corpus) 
-corpus1 <- VCorpus( VectorSource(yelp.sample$text))
+corpus1 <- Corpus(VectorSource(yelp.sample$text))
 
 # 2, Change to lower case
 corpus2 <- tm_map(corpus1, content_transformer(tolower))
@@ -433,32 +427,26 @@ corpus4 <- tm_map(corpus3, removePunctuation)
 corpus5 <- tm_map(corpus4, removeNumbers)
 
 # 6, Stem words
-corpus6 <- tm_map(corpus5, stemDocument, lazy = TRUE) # Removing lazy = TRUE according to Piazza post 233???
-
-#added extra step due to tm incompatibility for 0.7-1
-corpus7 <- VCorpus(VectorSource(corpus6)) #Had to make it VCorpus and not Corpus???
+corpus6 <- tm_map(corpus5, stemDocument) # Removing lazy = TRUE according to Piazza post 233
 
 # 7, Ready to get word frequency matrix
-dtm <- DocumentTermMatrix(corpus7)   ## library = collection of words for all documents
+dtm <- DocumentTermMatrix(corpus6)   ## library = collection of words for all documents
 
 # Cut the bag to only include the words appearing at least 2% of the time
 threshold <- .02*length(corpus6)   # 2% of the total documents 
-words.20 <- findFreqTerms(dtm1, lowfreq=threshold)  # words appearing at least among 2% of the documents
+words.20 <- findFreqTerms(dtm, lowfreq=threshold)  # words appearing at least among 2% of the documents
 
-dtm.20 <- DocumentTermMatrix(corpus7, control=list(dictionary = words.20))
-names(dtm.20)
-dtm.20$ncol
+dtm.20 <- DocumentTermMatrix(corpus6, control=list(dictionary = words.20))
+inspect(dtm.20[1:1000, 400:405])
 ```
 
 #### (i) Briefly explain what does this matrix record? What is the cell number at row 100 and column 405? What does it represent?
 
-This matrix records the frequency of words per document. The 100th row represents the 100th document. The 405th column represents the 405th word. Together, the 100, 405 tells you the frequency with which the 405th word appears in the 100th document.
-
-# TODO: right now DTM reduces to 4 documents so there's no way of getting 100,405, have to keep tabs on piazza to see what's up???
+This matrix records the frequency of words per document. The 100th row represents the 100th document. The 405th column represents the 405th word which is `wall`. Together, the 100, 405 tells you the frequency with which the 405th word appears in the 100th document. Its value is 0 indicating that the word wall doesn't appear in the 100th document.
 
 #### (ii) What is the sparsity of the dtm obtained here? What does that mean?
 
-The sparsity of the dtm is 75%. This means that the matrix is quite sparse and that there are many 0's across all entries in the matrix. This makes sense as every document only contains a small set of words from the whole bag of words.
+The sparsity of the dtm is 100%. This means that the matrix is extremely sparse and that there are many 0's across all entries in the matrix. This makes sense as every document only contains a small set of words from the whole bag of words.
 
 ### (2) 
 
