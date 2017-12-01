@@ -162,7 +162,7 @@ set.seed(10)
 
 #take subset of 100 subjects
 sample100 <- iq_data[sample(1:nrow(iq_data), 100,
-  	replace=FALSE),c("Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")] #"AFQT" I think this should be removed????
+  	replace=FALSE),c("Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")] 
 ```
 
 ### (1)
@@ -354,10 +354,9 @@ It is important to use the logarithmic transformation for income because a unit 
 
 #### (b) Run prcomp over ASVAB tests first.
 
-# Remove AFQT??
 
 ```{r}
-pc.asvab.all <- prcomp(iq_data[,c("AFQT","Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")], scale=TRUE)
+pc.asvab.all <- prcomp(iq_data[,c("Coding","Auto","Mechanic","Elec","Science","Math", "Arith", "Word", "Parag", "Numer")], scale=TRUE)
 ```
 
 #### (c) fit1: Income ~ PC1; fit2: Income ~ PC1+PC2+PC3. Notice the LS estimates of PC1 in both fit1 and fit2 are identical. Why is this so? Are the leading PC's of ASVAB significant variables to predict Income? 
@@ -379,7 +378,7 @@ summary(fit2)
 If variables are uncorrelated, the LS estimates are the same in both simple and multiple linear regression. As all the PC values are uncorrelated, the LS estimates of PC1 in both fit1 and fit2 are identical.
 
 ```{r}
-cpve.asvab.all <- 100*cumsum((pc.asvab.all$sdev)^2)/11  #10??? 
+cpve.asvab.all <- 100*cumsum((pc.asvab.all$sdev)^2)/10  
 
 # Scree plot of CPVE's
 plot(seq(1:11), cpve.asvab.all, pch=16, ylim=c(0, 100),
@@ -402,9 +401,12 @@ Yes, controlling for personal demographic variables and household environment va
 
 # TODO: need to explain what each of the PCs are ????
 
-## Problem 3
+## Problem 3 Case study: Yelp review 
 
-### 1)
+### (1) 
+
+Take a random sample of 20000 reviews (set.seed(1)) from our original data set. Extract document term matrix for texts to keep words appearing at least 2% of the time among all 20000 documents. Go through the similar process of cleansing as we did in the lecture. 
+
 ```{r}
 yelp.data <- read.csv("yelp_subset.csv", as.is=TRUE)
 
@@ -416,43 +418,52 @@ yelp.sample <- yelp.data[sample(1:nrow(yelp.data), 20000,
 
 # 1. Make corpus which is collection of texts
 # VCorpus (Volatile Corpus) 
-mycorpus1 <- VCorpus( VectorSource(yelp.sample$text))
+corpus1 <- VCorpus( VectorSource(yelp.sample$text))
 
 # 2, Change to lower case
-mycorpus2 <- tm_map(mycorpus1, content_transformer(tolower))
+corpus2 <- tm_map(corpus1, content_transformer(tolower))
 
 # 3, Remove some non-content words 
-mycorpus3<- tm_map(mycorpus2, removeWords, stopwords("english"))
+corpus3<- tm_map(corpus2, removeWords, stopwords("english"))
 
 # 4, Remove punctuations
-mycorpus4 <- tm_map(mycorpus3, removePunctuation)
+corpus4 <- tm_map(corpus3, removePunctuation)
 
 # 5, Remove numbers 
-mycorpus5 <- tm_map(mycorpus4, removeNumbers)
+corpus5 <- tm_map(corpus4, removeNumbers)
 
 # 6, Stem words
-mycorpus6 <- tm_map(mycorpus5, stemDocument, lazy = TRUE)
+corpus6 <- tm_map(corpus5, stemDocument, lazy = TRUE) # Removing lazy = TRUE according to Piazza post 233???
 
 #added extra step due to tm incompatibility for 0.7-1
-mycorpus7 <- Corpus(VectorSource(mycorpus6))
+corpus7 <- VCorpus(VectorSource(corpus6)) #Had to make it VCorpus and not Corpus???
 
 # 7, Ready to get word frequency matrix
-dtm1 <- DocumentTermMatrix(mycorpus7)   ## library = collection of words for all documents
+dtm <- DocumentTermMatrix(corpus7)   ## library = collection of words for all documents
 
 # Cut the bag to only include the words appearing at least 2% of the time
-threshold <- .02*length(mycorpus6)   # 2% of the total documents 
-words.10 <- findFreqTerms(dtm1, lowfreq=threshold)  # words appearing at least among 2% of the documents
+threshold <- .02*length(corpus6)   # 2% of the total documents 
+words.20 <- findFreqTerms(dtm1, lowfreq=threshold)  # words appearing at least among 2% of the documents
 
-dtm.10<- DocumentTermMatrix(mycorpus7, control=list(dictionary = words.10))
+dtm.20 <- DocumentTermMatrix(corpus7, control=list(dictionary = words.20))
+names(dtm.20)
+dtm.20$ncol
 ```
-#### i)
-This matrix records the frequency of words per document. The 100th row represents the 100th document. The 405th column represents the 405th word. Together, the 100,405 tells you the frequency with which the 405th word appears in the 100th document.
-TODO: right now DTM reduces to 4 documents so there's no way of getting 100,405, have to keep tabs on piazza to see what's up
 
-#### ii)
+#### (i) Briefly explain what does this matrix record? What is the cell number at row 100 and column 405? What does it represent?
+
+This matrix records the frequency of words per document. The 100th row represents the 100th document. The 405th column represents the 405th word. Together, the 100, 405 tells you the frequency with which the 405th word appears in the 100th document.
+
+# TODO: right now DTM reduces to 4 documents so there's no way of getting 100,405, have to keep tabs on piazza to see what's up???
+
+#### (ii) What is the sparsity of the dtm obtained here? What does that mean?
+
 The sparsity of the dtm is 75%. This means that the matrix is quite sparse and that there are many 0's across all entries in the matrix. This makes sense as every document only contains a small set of words from the whole bag of words.
 
-### 2)
+### (2) 
+
+Set the stars as a two category response variable called rating to be "1" = 5,4 and "0"= 1,2,3. Combine the variable rating with the dtm as a data frame called data2. Get a training data with 15000 reviews and the rest 5000 reserved as the testing data. 
+
 ```{r}
 # Set stars as a categorical variable. Also group stars 1-3 as 0 and 4,5 as 1
 yelp.sample$rating <- c(0)
@@ -460,10 +471,30 @@ yelp.sample$rating[yelp.sample$stars >= 4] <- 1
 yelp.sample$rating <- as.factor(yelp.sample$rating)
 
 #combine dtm and rating
-data2 <- data.frame(yelp.sample,as.matrix(dtm.10) )  
+data2 <- data.frame(yelp.sample,as.matrix(dtm.20) )  
 
 #get training and testing split
 train <- sample(1:nrow(yelp.sample), 15000, replace=FALSE)
-yelp.train <- data2[train,]
-yelp.test <- data2[-(train),]
+yelp.train <- data2[train, -c(1:3)] # only keep rating and the texts
+yelp.test <- data2[-(train), -c(1:3)]
+
+
+names(yelp.train) 
 ```
+# Do we need cols 1:7, 9 & 10???
+
+### (3)
+
+Use the training data to get Lasso fit. Choose lambda.1se. Keep the result here.
+
+```{r}
+Y.lasso <- yelp.train$rating
+X.lasso <- as.matrix(yelp.train[, -c(1)]) # we can use as.matrix directly here
+
+X1.lasso <- sparse.model.matrix(rating~., data=yelp.train)[, -1]
+dim(X1.lasso)
+set.seed(2)
+
+result.lasso <- cv.glmnet(X.lasso, Y.lasso, alpha=.99, family="binomial") 
+```
+
