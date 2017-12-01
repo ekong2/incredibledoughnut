@@ -437,7 +437,7 @@ threshold <- .02*length(corpus6)   # 2% of the total documents
 words.20 <- findFreqTerms(dtm, lowfreq=threshold)  # words appearing at least among 2% of the documents
 
 dtm.20 <- DocumentTermMatrix(corpus6, control=list(dictionary = words.20))
-inspect(dtm.20[1:1000, 400:405])
+inspect(dtm.20[100, 405])
 ```
 
 #### (i) Briefly explain what does this matrix record? What is the cell number at row 100 and column 405? What does it represent?
@@ -461,15 +461,12 @@ yelp.sample$rating <- as.factor(yelp.sample$rating)
 #combine dtm and rating
 data2 <- data.frame(yelp.sample,as.matrix(dtm.20) )  
 
+set.seed(19)
 #get training and testing split
 train <- sample(1:nrow(yelp.sample), 15000, replace=FALSE)
-yelp.train <- data2[train, -c(1:3)] # only keep rating and the texts
-yelp.test <- data2[-(train), -c(1:3)]
-
-
-names(yelp.train) 
+yelp.train <- data2[train, -c(1:10)] # only keep rating and the texts
+yelp.test <- data2[-(train), -c(1:10)]
 ```
-# Do we need cols 1:7, 9 & 10???
 
 ### (3)
 
@@ -479,10 +476,30 @@ Use the training data to get Lasso fit. Choose lambda.1se. Keep the result here.
 Y.lasso <- yelp.train$rating
 X.lasso <- as.matrix(yelp.train[, -c(1)]) # we can use as.matrix directly here
 
-X1.lasso <- sparse.model.matrix(rating~., data=yelp.train)[, -1]
-dim(X1.lasso)
 set.seed(2)
 
 result.lasso <- cv.glmnet(X.lasso, Y.lasso, alpha=.99, family="binomial") 
+plot(result.lasso)
 ```
+```{r}
+beta.lasso <- coef(result.lasso, s="lambda.1se")   # output lasso estimates
+beta <- beta.lasso[which(beta.lasso !=0),] # non zero beta's
+beta <- as.matrix(beta);
+beta <- rownames(beta)
+beta
+```
+
+### (4)
+Feed the output from Lasso above, get a logistic regression
+
+#### (i) Pull out all the positive coefficients and the corresponding words. Rank the coefficients in a decreasing order. Report the leading 2 words and the coefficients. Describe briefly the interpretation for those two coefficients. 
+
+#### (ii) Make a word cloud with the top 100 positive words according to their coefficients. Interpret the cloud briefly.
+
+#### (iii) Repeat i) and ii) for the bag of negative words.
+
+#### (iv) Summarize the findings. 
+
+### (5)
+  
 
