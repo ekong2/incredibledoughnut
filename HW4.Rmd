@@ -492,14 +492,86 @@ beta
 ### (4)
 Feed the output from Lasso above, get a logistic regression
 
+```{r}
+glm.input <- as.formula(paste("rating", "~", paste(beta[-1],collapse = "+"))) 
+result.glm <- glm(glm.input, family=binomial, yelp.train )
+```
+
 #### (i) Pull out all the positive coefficients and the corresponding words. Rank the coefficients in a decreasing order. Report the leading 2 words and the coefficients. Describe briefly the interpretation for those two coefficients. 
+
+```{r}
+result.glm.coef <- coef(result.glm)
+good.glm <- result.glm.coef[which(result.glm.coef > 0)]
+good.fre <- sort(good.glm, decreasing = TRUE)
+good.fre[1:2]
+```
+The leading 2 words and their coefficients are as displayed above. If the word excel which was probably excellent, or amaz which was probably amazing before stemming is present in the review, there is higher probability of it getting a good rating. More the number of these words, greater the probability, the word excel having higher probability than amaz.
 
 #### (ii) Make a word cloud with the top 100 positive words according to their coefficients. Interpret the cloud briefly.
 
+```{r}
+cor.special <- brewer.pal(8,"Dark2")
+good.word <- names(good.fre)
+wordcloud(good.word[1:100], good.fre[1:100], colors=cor.special, ordered.colors=F)
+```
+
+In the wordcloud, the larger the size of the word, greater is its coefficient, and hence higher is the correspoding probability of the rating being high. From the plot, we can see that the words excel (excellent), amaz (amazing), delici (delicious), perfect, yum all have big font sizes, and hence if the text contains these words, the rating is likely to be higher.
+
 #### (iii) Repeat i) and ii) for the bag of negative words.
+```{r}
+bad.glm <- result.glm.coef[which(result.glm.coef < 0)]
+cor.special <- brewer.pal(6,"Dark2")
+bad.fre <- sort(-bad.glm, decreasing = TRUE)
+bad.word <- names(bad.fre)
+wordcloud(bad.word[1:100], bad.fre[1:100], 
+          color=cor.special, ordered.colors=F)
+```
+
+In the wordcloud, the larger the size of the word, greater is its negative coefficient, and hence higher is the correspoding probability of the rating being low. From the plot, we can see that the words worst, rude, terribl (terrible), , bland, overpr(overpriced), all have big font sizes, and hence if the text contains these words, the rating is likely to be low.
+
 
 #### (iv) Summarize the findings. 
 
+The sentiment analysis has done a great job of distinguishing between the positive and negative words. By visualizing the top 100 words in wordcloud, we can verify that the words and their relative sizes do make a lot of sense.
+
 ### (5)
-  
+Using majority votes find the testing errors
+
+#### (i) From Lasso fit in 3)
+
+```{r}
+predict.lasso <- predict(result.lasso, as.matrix(yelp.test[, -1]), type = "class", s="lambda.1se")
+mean(yelp.test$rating != predict.lasso)
+```
+
+The testing error using Lasso fit is `0.2114`.
+
+#### (ii) From logistic regression in 4)
+```{r}
+predict.glm <- predict(result.glm, yelp.test, type = "response")
+class.glm <- rep("0", 5000)
+class.glm[predict.glm > .5] ="1"
+
+testerror.glm <- mean(yelp.test$rating != class.glm)
+testerror.glm
+```
+The testing error using logistic egression is `0.2074`.
+
+#### (iii) Which one is smaller?
+
+The testing error obtained from logistic regression is slightly smaller than the testing error obtained from Lasso fit.
+
+### (6)
+Now we will apply RTextTools using the same Training and Testing data as we have reserved.  Run 
+#### (i) Logistic Reg. Is the testing error obtained here same as the one we got in 5) ii)?
+
+#### (ii) RF. Get the testing error
+
+#### (iii) SVM. Get the testing error  
+#### (iv) Boosting. Get the testing error
+
+Which classifier(s) seem to produce the least testing error? Are you surprised?
+
+### (7)
+For the purpose of prediction, comment on how would you predict a rating if you are given a review using our final model? 
 
