@@ -187,7 +187,7 @@ sum(pc1.loadings^2)
 sum(pc2.loadings^2)
 ```
 
-As the squares of the laodings add up to 1, they are unit vectors.
+As the squares of the loadings add up to 1, they are unit vectors.
 
 The loadings for PC1 are:
 ```{r}
@@ -261,7 +261,7 @@ abline(v=0, h=0)
 ```
 Here we plot PC1 as the x-axis and PC2 as the y-axis. We can see that the graph has an overall flattened oval shape which closely matches what we expect. PC1 has higher variability and so we expect its "spread" to be greater than PC2's. 
 
-The angle between the vectors indicates the correlation between them. From the plot we can see that Word and Math scores are highly correlated. The five scores: Numer, Parag, Word, Math and Arith vectors are close to eachother, which shows that there is high correlation between them. The points that are furthest in the left corner are those with the highest scores in all the areas, while the ones in the right are those with the lowest scores. The points which are in the top quadrants are those who scored higher in Coding, Word, Parag, Numer, Math compared to the other scores, while the ones in the bottom quadrants are those who scored higher in Auto, Mechanic, Elec and Science.
+The angle between the vectors indicates the correlation between them. From the plot we can see that Word and Math scores are highly correlated. The five scores: Numer, Parag, Word, Math and Arith vectors are close to each other, which shows that there is high correlation between them. The points that are furthest in the left corner are those with the highest scores in all the areas, while the ones in the right are those with the lowest scores. The points which are in the top quadrants are those who scored higher in Coding, Word, Parag, Numer, Math compared to the other scores, while the ones in the bottom quadrants are those who scored higher in Auto, Mechanic, Elec and Science.
 
 
 #### (g) Repeat the above biplot but label points with different colors, according to their Gender. Do you see a systematic separation between Male and Female in the biplot? Write a brief summary about your findings.
@@ -515,7 +515,7 @@ good.word <- names(good.fre)
 wordcloud(good.word[1:100], good.fre[1:100], colors=cor.special, ordered.colors=F)
 ```
 
-In the wordcloud, the larger the size of the word, greater is its coefficient, and hence higher is the correspoding probability of the rating being high. From the plot, we can see that the words excel (excellent), amaz (amazing), delici (delicious), perfect, yum all have big font sizes, and hence if the text contains these words, the rating is likely to be higher.
+In the word cloud, the larger the size of the word, greater is its coefficient, and hence higher is the corresponding probability of the rating being high. From the plot, we can see that the words excel (excellent), amaz (amazing), delici (delicious), perfect, yum all have big font sizes, and hence if the text contains these words, the rating is likely to be higher.
 
 #### (iii) Repeat i) and ii) for the bag of negative words.
 ```{r}
@@ -527,12 +527,12 @@ wordcloud(bad.word[1:100], bad.fre[1:100],
           color=cor.special, ordered.colors=F)
 ```
 
-In the wordcloud, the larger the size of the word, greater is its negative coefficient, and hence higher is the correspoding probability of the rating being low. From the plot, we can see that the words worst, rude, terribl (terrible), , bland, overpr(overpriced), all have big font sizes, and hence if the text contains these words, the rating is likely to be low.
+In the word cloud, the larger the size of the word, greater is its negative coefficient, and hence higher is the corresponding probability of the rating being low. From the plot, we can see that the words worst, rude, terribl (terrible), , bland, overpr(overpriced), all have big font sizes, and hence if the text contains these words, the rating is likely to be low.
 
 
 #### (iv) Summarize the findings. 
 
-The sentiment analysis has done a great job of distinguishing between the positive and negative words. By visualizing the top 100 words in wordcloud, we can verify that the words and their relative sizes do make a lot of sense.
+The sentiment analysis has done a great job of distinguishing between the positive and negative words. By visualizing the top 100 words in word cloud, we can verify that the words and their relative sizes do make a lot of sense.
 
 ### (5)
 Using majority votes find the testing errors
@@ -555,7 +555,7 @@ class.glm[predict.glm > .5] ="1"
 testerror.glm <- mean(yelp.test$rating != class.glm)
 testerror.glm
 ```
-The testing error using logistic egression is `0.2074`.
+The testing error using logistic regression is `0.2074`.
 
 #### (iii) Which one is smaller?
 
@@ -583,7 +583,7 @@ yelp.glmnet_mce <- mean(yelp.rating[15001:20000] != yelp.glmnet_out[, 1])
 yelp.glmnet_mce
 ```
 
-The testing errors obtained from 5.ii and this are very similar, but not excatly the same. In 5.ii we obtained a testing error of `0.2074`, while using RTextTools we obtained `0.2316`.
+The testing errors obtained from 5.ii and this are very similar, but not exactly the same. In 5.ii we obtained a testing error of `0.2074`, while using RTextTools we obtained `0.2316`.
 
 #### (ii) RF. Get the testing error
 
@@ -626,4 +626,4 @@ For the present dataset, in this particular partition, SVM and RF seemed to prod
 
 ### (7)
 For the purpose of prediction, comment on how would you predict a rating if you are given a review using our final model? 
-If we were given a review in order to predict a rating, we would first do the same preprocessing to the text as we did here. Then we would create a Document-Term frequency matrix. Then, using the final model developed, we would predict the rating.
+If we were given a review in order to predict a rating, we would first do the same preprocessing to the text as we did here. Then we would create a Document-Term frequency matrix. Then using a training and test split, we train a model with an acceptable testing error. Then, using the final model developed, we would predict the rating.
