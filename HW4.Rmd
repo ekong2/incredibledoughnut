@@ -563,15 +563,67 @@ The testing error obtained from logistic regression is slightly smaller than the
 
 ### (6)
 Now we will apply RTextTools using the same Training and Testing data as we have reserved.  Run 
+
+```{r}
+combined.frame <- rbind(yelp.train, yelp.test)
+yelp.rating <- as.factor(combined.frame$rating)
+yelp.matrix <- as.matrix(combined.frame[, -1])
+int.matrix <- apply (yelp.matrix, c (1, 2), function (x) { 
+  (as.integer(x)) #was num, had to convert to int
+  }) 
+yelp.container <- create_container(int.matrix, labels=yelp.rating, trainSize = 1:15000,testSize = 15001:20000,virgin=FALSE)
+```
+
 #### (i) Logistic Reg. Is the testing error obtained here same as the one we got in 5) ii)?
+
+```{r}
+yelp.model_glmnet <- train_model(yelp.container, "GLMNET")
+yelp.glmnet_out <- classify_model(yelp.container, yelp.model_glmnet)
+yelp.glmnet_mce <- mean(yelp.rating[15001:20000] != yelp.glmnet_out[, 1])
+yelp.glmnet_mce
+```
+
+The testing errors obtained from 5.ii and this are very similar, but not excatly the same. In 5.ii we obtained a testing error of `0.2074`, while using RTextTools we obtained `0.2316`.
 
 #### (ii) RF. Get the testing error
 
-#### (iii) SVM. Get the testing error  
+```{r}
+yelp.model_RF <- train_model(yelp.container, "RF")  
+yelp.RF_out <- classify_model(yelp.container, yelp.model_RF) 
+
+
+yelp.RF_mce <- mean(yelp.rating[15001:20000] != yelp.RF_out[, 1])
+yelp.RF_mce 
+```
+The testing error using RF is `r yelp.RF_mce`.
+
+#### (iii) SVM. Get the testing error 
+
+```{r}
+yelp.model_SVM <- train_model(yelp.container, "SVM")   
+yelp.SVM_out <- classify_model(yelp.container, yelp.model_SVM) 
+
+yelp.SVM_mce <- mean(yelp.rating[15001:20000] != yelp.SVM_out[, 1])
+yelp.SVM_mce
+```
+
+The testing error using SVM is `r yelp.SVM_mce`.
+
 #### (iv) Boosting. Get the testing error
 
+```{r}
+yelp.model_BOOSTING <- train_model(yelp.container, "BOOSTING")    
+yelp.BOOSTING_out <- classify_model(yelp.container, yelp.model_BOOSTING) 
+
+
+yelp.BOOSTING_mce <- mean(yelp.rating[15001:20000] != yelp.BOOSTING_out[, 1])
+yelp.BOOSTING_mce
+```
+The testing error using Boosting is`r yelp.BOOSTING_mce`.
+
 Which classifier(s) seem to produce the least testing error? Are you surprised?
+For the present dataset, in this particular partition, SVM and RF seemed to produce the least testing error. 
 
 ### (7)
 For the purpose of prediction, comment on how would you predict a rating if you are given a review using our final model? 
-
+If we were given a review in order to predict a rating, we would first do the same preprocessing to the text as we did here. Then we would create a Document-Term frequency matrix. Then, using the final model developed, we would predict the rating.
