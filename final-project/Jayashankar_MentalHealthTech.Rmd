@@ -1,0 +1,319 @@
+---
+title: "Final Project: Understanding Mental Health in Tech Workplaces"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if(!require('pacman')) {
+  install.packages('pacman')
+}
+pacman::p_load(leaps, pROC, glmnet, MASS, dplyr, car, ggplot2, scales, randomForest, neuralnet, tidyverse, reshape2)
+```
+
+```{r}
+set.seed(1)
+data <- read.csv("data_clean.csv", header=T)
+data$self_employed <- as.factor(data$self_employed)
+data$previous_employers <- as.factor(data$previous_employers)
+data$sought_treatment <- as.factor(data$sought_treatment)
+```
+
+# EDA
+
+```{r}
+#Corelation Map:
+filtered.data <- data %>% select(role, age, sought_treatment, medical_diagnosis, current, past, family_history, unsupportive, share, negative_coworker, hurt_career, mental_health_interview, physical_health_interview)
+num.data <- data.frame(sapply(filtered.data, function(x) as.numeric(x)))
+plotData <-melt(cor(num.data[sapply(num.data, is.numeric)]))
+
+ggplot(plotData ,
+    aes(x = Var1, y = Var2, fill =value)) +
+    geom_tile() +
+    ylab("") +
+    xlab("") +
+scale_x_discrete(limits = rev(levels(plotData $Var2))) + #Flip the x- or y-axis
+    scale_fill_gradient( low = "#56B1F7", high = "#132B43") +     
+       guides(fill = guide_legend(title = "Correlation")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+#Age Distribution:
+hist(data$age, xlab="Age distribution")
+```
+
+```{r}
+#Medically diagnosed:
+ggplot(data, aes(x=medical_diagnosis)) + geom_bar(fill="steelblue") 
+```
+
+```{r}
+#Gender distribution:
+ggplot(data, aes(x=gender, fill = medical_diagnosis)) + geom_bar(aes(y = (..count..)/sum(..count..))) + scale_y_continuous(labels=percent) + labs( title = "Histogram of Gender", x = "Gender" , y = "Percentage") 
+```
+
+```{r}
+#Sought help:
+ggplot(data, aes(x=medical_diagnosis, fill = sought_treatment)) + geom_bar(aes(y = (..count..)/sum(..count..))) + scale_y_continuous(labels=percent) + labs( title = "", x = "Medically diagnosed" , y = "Percentage") 
+```
+
+```{r}
+#Heat Map:
+mhealth2016 <- read.csv("data_clean.csv")
+
+mhealthstates <- mhealth2016
+mhealthstates$medical_diagnosis <- ifelse(mhealth2016$medical_diagnosis=="Yes", 1, 0)
+
+#Create Heatmap of USA mental health diagnosis
+data.s <- mhealthstates %>%
+  group_by(state) %>%
+  summarise(
+    medical.diagnosis=sum(medical_diagnosis, na.rm=TRUE), #ignore the missing values
+    n=n())
+
+#Create a new data frame with mean diagnosis rate and corresponding state name
+diagnosis <- data.s[, c("state", "medical.diagnosis")]
+
+#Change lower case state names Pennsylvania --> pennsylvania
+diagnosis$region <- tolower(diagnosis$state)
+
+#Add the center coordinate for each state `state.center` contains the coordinate corresponding to `state.abb` in order.
+diagnosis$center_lat  <- state.center$x[match(diagnosis$state, state.abb)]
+diagnosis$center_long <- state.center$y[match(diagnosis$state, state.abb)]
+
+#Load US map info
+states <- map_data("state") 
+
+#Combine the US map data with the diagnosis data
+map <- merge(states, diagnosis, sort=FALSE, by="region", all.x=TRUE)
+
+#Re-establish the point order
+map <- map[order(map$order),]
+
+ggplot(map, aes(x=long, y=lat, group=group))+
+  geom_polygon(aes(fill=medical.diagnosis))+
+  geom_path()+ 
+  ggtitle("Mean diagnosis rate in the United States") +
+  geom_text(data=diagnosis, aes(x=center_lat, y=center_long, group=NA, 
+                             label=state, size=2), show.legend =FALSE)+
+  scale_fill_continuous(limits=c(0, 100),name="Mean Diagnosis Rate",
+                        low="light blue", high="dark blue", na.value="white")
+```
+
+# MODEL BUILDING
+
+```{r}
+drops <- c("diagnosis_result","maybe_diagnosis","yes_diagnosis", "sought_treatment", "current", "past")
+data <- data[ , !(names(data) %in% drops)]
+```
+
+```{r}
+levels(data$medical_diagnosis) <- c(levels(data$medical_diagnosis), "0", "1")
+data$medical_diagnosis[data$medical_diagnosis == "Yes"] <- "1"
+data$medical_diagnosis[data$medical_diagnosis == "No"] <- "0"
+data$medical_diagnosis <- droplevels(data$medical_diagnosis)
+```
+
+```{r}
+n <- nrow(data)
+n1 <- (2/3)*n
+train.index <- sample(n, n1,replace=FALSE)
+length(train.index)
+data.train <- data[train.index, ]
+data.test <- data[-train.index, ]
+```
+
+# LASSO
+
+```{r}
+X <- as.matrix(model.matrix(medical_diagnosis ~ ., data.train)[, -1])
+Y <- as.matrix(data.train[, 29])
+```
+
+```{r}
+lasso.fit <- cv.glmnet(X, Y, alpha=0.99, family="binomial", nfolds = 10, type.measure = "deviance")  
+```
+
+```{r}
+plot(lasso.fit)  
+```
+
+```{r}
+lasso.fit$lambda.1se
+```
+
+```{r}
+coef.1se <- coef(lasso.fit, s="lambda.1se")  
+coef.1se <- coef.1se[which(coef.1se !=0),] 
+rownames(as.matrix(coef.1se))
+```
+
+#LOGREG
+
+```{r}
+fit.logit.1 <- glm(medical_diagnosis ~ care_options + mental_health_interview + negative_coworker + share + unsupportive + family_history + gender, family=binomial, data=data.train)
+```
+
+```{r}
+Anova(fit.logit.1)
+```
+
+```{r}
+#Logreg train
+predict.logit.1 <- rep("0", 557)
+predict.logit.1[fit.logit.1$fitted >= 0.5] = "1" 
+```
+
+```{r}
+logit.roc.1 <- roc(data.train$medical_diagnosis, fit.logit.1$fitted, plot=F, col="blue")
+mce.logit.1 <- mean(predict.logit.1 != data.train$medical_diagnosis)
+mce.logit.1
+logit.roc.1$auc
+```
+
+```{r}
+#Logreg test
+pred <- predict(fit.logit.1, data.test, type="response")
+predict.logit.2 <- ifelse(pred >= 0.5, "1", "0")
+```
+
+```{r}
+logit.roc.2 <- roc(data.test$medical_diagnosis, pred, plot=F, col="blue")
+mce.logit.2 <- mean(predict.logit.2 != data.test$medical_diagnosis)
+mce.logit.2
+logit.roc.2$auc
+```
+
+```{r}
+#ROC for Logit/LASSO model
+plot(1-logit.roc.1$specificities, logit.roc.1$sensitivities, col="red", pch=16, cex=.7, 
+     xlab="False Positive", 
+     ylab="Sensitivity")
+points(1-logit.roc.2$specificities, logit.roc.2$sensitivities, col="blue", pch=16, cex=.7, 
+     xlab="False Positive", 
+     ylab="Sensitivity")
+legend("bottomright", legend = c("Test", "Train"), col = c("blue", "red"), pch = 15)
+title("ROC curve for Logit")
+```
+
+#Random Forest
+
+```{r}
+#dropping irrelevant and highly correlated categoricals
+f<- data.frame(mhealth2016)
+drops <- c("state","diagnosis_result","maybe_diagnosis","yes_diagnosis", "sought_treatment", "current", "past")
+categoricals_removed <- f[ , !(names(f) %in% drops)]
+
+#B tuning, for a fixed mtry = 6
+fit.rf <- randomForest(medical_diagnosis~., categoricals_removed, mtry=6, ntree=500)
+#plot(fit.rf)
+
+#mtry tuning for B = 300
+par(mfrow=c(3,1))
+rf.error.p <- 1:15  # set up a vector of length 30
+for (p in 1:15)  # repeat the following code inside { } 30 times
+{
+  fit.rf <- randomForest(medical_diagnosis~., categoricals_removed, mtry=p, ntree=300)  
+  #plot(fit.rf, col= p, lwd = 3)
+  fit.rf.pred.y <- predict(fit.rf, type="response")
+  rf.error.p[p] <- mean(categoricals_removed$medical_diagnosis != fit.rf.pred.y)  # collecting oob mse based on 300 trees
+}
+rf.error.p   # oob mse returned: should be a vector of 15
+
+#make plot for mse vs mtry
+plot.new
+plot(1:15, rf.error.p[1:15], xlim=range(1:15), ylim=range(0.35), pch=16,
+     main = "RF plot, B=300. MSE vs mtry",
+     xlab="mtry",
+     ylab="mse of mtry")
+
+lines(1:15, rf.error.p[1:15], xlim=range(1:15), ylim=range(0.35), pch=16)
+
+
+#final model, get training error
+#mtry = p/3.. where p = 28. tuned it to be: 
+fit.rf <- randomForest(medical_diagnosis~., categoricals_removed, mtry=8, ntree=300)
+
+plot(fit.rf)  # Three curves of MCE of 1's, 0's and  overall. 
+
+fit.rf.pred <- predict(fit.rf, type="prob")  # output the prob of "0" and "1")
+fit.rf.pred.y <- predict(fit.rf, type="response")
+mean(categoricals_removed$medical_diagnosis != fit.rf.pred.y) #MCE = 0.1063321, new MCE 0.2930622
+
+
+#final model, get testing errors using test/train split
+set.seed(1)
+#testing and training split...
+n <- nrow(categoricals_removed)
+n1 <- (2/3)*n
+train.index <- sample(n, n1,replace=FALSE)
+length(train.index)
+data.train <- categoricals_removed[train.index, ]
+data.test <- categoricals_removed[-train.index, ]
+
+###
+fit.rf.train <- randomForest(medical_diagnosis~., data.train, mtry=8, ntree=300) 
+plot(fit.rf.train)
+predict.rf.y <- predict(fit.rf.train, newdata=data.test)   # labels
+predict.rf <- predict(fit.rf.train, newdata=data.test, type="prob")  #probabilities
+
+# Testing errors
+mean(data.test$medical_diagnosis != predict.rf.y)   # MCE 0.2616487
+
+# Testing ROC curve
+roc(data.test$medical_diagnosis, predict.rf[,2], plot=TRUE, main="ROC curve for RF", print.auc=TRUE)  
+#AUC is 0.7633
+
+```
+
+# Neural Nets
+
+```{r}
+#remove unnecessary or irrelevant data
+f<- data.frame(mhealth2016)
+#drops <- c("state","diagnosis_result","maybe_diagnosis","yes_diagnosis", "sought_treatment", "current", "past")
+#LASSO: medical_diagnosis ~ care_options + mental_health_interview + negative_coworker + share + unsupportive + family_history + gender
+keep <- c("medical_diagnosis", "unsupportive", "family_history", "care_options", "mental_health_interview", "negative_coworker", "share", "gender")
+#mhealthNN <- f[ , !(names(f) %in% drops)]
+mhealthNN <- f[, (names(f) %in% keep)]
+names(mhealthNN)
+#Label cols that are factors
+indx <- sapply(mhealthNN, is.factor)
+
+#convert factors to numerics
+mhealthNN[indx] <- lapply(mhealthNN[indx], function(x) as.numeric(x))
+
+set.seed(1)
+#Testing and training split...
+n <- nrow(mhealthNN)
+n1 <- (2/3)*n
+train.index <- sample(n, n1,replace=FALSE)
+length(train.index)
+data.train <- mhealthNN[train.index, ]
+data.test <- mhealthNN[-train.index, ]
+
+#Remove y to create the formula
+drop_y <- c("medical_diagnosis")
+mhealthNNwithoutY <- mhealthNN[ , !(names(mhealthNN) %in% drop_y)]
+
+paste(names(mhealthNNwithoutY))
+
+formula <- as.formula(paste("medical_diagnosis", " ~ ", 
+                      paste(names(mhealthNNwithoutY), collapse = "+")))  
+set.seed(1)
+#Train the neural net
+nn <- neuralnet::neuralnet(formula, 
+                           data = data.train, 
+                           hidden = c(2,2),
+                           act.fct = "logistic",
+                           linear.output=TRUE) 
+plot(nn)
+
+fit.nn.1.pred <- neuralnet::compute(nn, data.test[-ncol(data.test)]) # Remove Labels, keep only X's 
+pred.1 <- sapply(1:nrow(fit.nn.1.pred$net.result), 
+                 function(x) round(fit.nn.1.pred$net.result[x,],0))
+mean(pred.1 != data.test$medical_diagnosis)
+
+roc(data.test$medical_diagnosis, pred.1, plot=TRUE, main="ROC curve for LASSO features NN", print.auc=TRUE)
+```
